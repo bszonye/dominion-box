@@ -109,7 +109,7 @@ ug_supreme = 0.23;  // 115 micron sleeves (Ultimate Guard supreme)
 double_sleeve = 0.30;  // 100 + 50 micron double sleeve
 
 function card_count(h, quality=no_sleeve, card=dominion_card) =
-    floor(d / (card + quality));
+    floor(h / (card + quality));
 function vdeck(n=1, sleeve, quality, card=dominion_card, wide=false) = [
     wide ? max(sleeve.x, sleeve.y) : min(sleeve.x, sleeve.y),
     wide ? min(sleeve.x, sleeve.y) : max(sleeve.x, sleeve.y),
@@ -283,6 +283,25 @@ Vtray = [135, 85];  // small tray block
 // main tier heights: two thick layers + one thinner top layer
 Htier = 25;
 Htop = 15;
+
+Dtall = purple_sleeve.x + 2*Rext;
+Dwide = purple_sleeve.y + 2*Rext;
+Xtall = Vfloor.x/Dtall;
+Xwide = Vfloor.x/Dwide;
+Ytall = Vfloor.y/Dtall;
+Ywide = Vfloor.y/Dwide;
+Xcards = card_count(Vfloor.x - 8*Rext, sk_standard);
+Ycards = card_count(Vfloor.y - 4*Rext, sk_standard);
+Xmid = Vfloor.x - (Dwide*floor(Xwide));
+echo(Dtall=Dtall, Dwide=Dwide);
+echo(Xtall=Xtall, Xwide=Xwide);
+echo(Ytall=Ytall, Ywide=Ywide);
+echo(Xcards=Xcards, Ycards=Ycards);
+echo(floor(Xtall) * Ycards);
+echo(floor(Xwide) * Ycards);
+echo(floor(Ytall) * Xcards);
+echo(floor(Ywide) * Xcards);
+echo(Xmid=Xmid);
 
 module prism(h, shape=undef, r=undef, r1=undef, r2=undef, scale=1) {
     module curve() {

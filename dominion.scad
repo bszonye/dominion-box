@@ -453,7 +453,7 @@ module player_mats(d, n=Nplayers, lean=true) {
     hpile = max([for (mat=vmat) mat.y]);
     echo(hpile, ylean);
     lean(hpile, ylean, lean ? 0 : 90)
-    for (i=[0:1:n-1]) {
+    for (i=[0:1:n-1]) color(player_colors[5-i], 0.5) {
         translate([0, n*dstack-d/2]) rotate([90, 0, 0])
         raise(i*dstack) for (j=[0:1:len(vmat)-1]) {
             mat = vmat[j];

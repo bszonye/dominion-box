@@ -116,28 +116,25 @@ function vdeck(n=1, sleeve, quality, card=dominion_card, wide=false) = [
     wide ? min(sleeve.x, sleeve.y) : max(sleeve.x, sleeve.y),
     n*(quality+card)];
 
-echo(vdeck(70, euro_sleeve, ug_premium));  // ultimate guard premium soft
-echo(vdeck(286, euro_sleeve, ug_premium)+[0, 0, 27*2*index_card]);
-echo(vdeck(286, euro_sleeve, sk_standard)+[0, 0, 27*2*index_card]);
 // measured card sizes
 // 3.5mm / 16 index card layers = 440 microns/pile (220 per index card layer)
 // victory cards (sets of 12)
-echo(v12=5.0/12, vdeck(12, euro_sleeve, ug_premium));
+// echo(v12=5.0/12, vdeck(12, euro_sleeve, ug_premium));
 // 4.8-5.0mm w/UG sleeves = 400-417 microns/card
 // 5.2-5.5mm w/index cover = 450 microns/pile (225 per index card layer)
 // action cards (sets of 10)
-echo(a10=4.2/10, vdeck(10, euro_sleeve, ug_premium));
+// echo(a10=4.2/10, vdeck(10, euro_sleeve, ug_premium));
 // 4.0-4.2mm w/UG sleeves = 400-420 microns/card
 // 4.4-4.6mm w/index cover = 400 microns/pile (200 per index card layer)
 // silver cards (set of 70)
-echo(s70=29/70, vdeck(70, euro_sleeve, ug_premium));
+// echo(s70=29/70, vdeck(70, euro_sleeve, ug_premium));
 // 29mm / 70 Dominion cards = 414 microns/card
 // gold cards (set of 48)
-echo(g48=20.0/48, vdeck(48, euro_sleeve, ug_premium));
+// echo(g48=20.0/48, vdeck(48, euro_sleeve, ug_premium));
 // 19.7-20.5mm w/UG sleeves = 410-427 microns/card
 // gold cards (set of 30)
-echo(g30=12.6/30, vdeck(30, euro_sleeve, ug_premium));
-echo(g30=9.6/30, vdeck(30, euro_sleeve, no_sleeve));
+// echo(g30=12.6/30, vdeck(30, euro_sleeve, ug_premium));
+// echo(g30=9.6/30, vdeck(30, euro_sleeve, no_sleeve));
 // 12.3-12.7mm w/UG sleeves = 410-423 microns/card
 // 9.2-9.6mm unsleeved = 307-320 microns/card
 
@@ -247,12 +244,26 @@ module box(size, wall=1, frame=false, a=0) {
 }
 
 // component metrics
+Nplayers = 6;  // many components come in sixes
 Vcard = euro_sleeve;
 Hcard = dominion_card + sk_standard;
 Hboard = 2.25;  // tile & token thickness -- TODO
 Vmanual1 = [210, 297];  // approximate (Dominion, Intrigue, Seaside)
 Vmanual2 = [235, 286];  // approximate (Prosperity)
 Vmanual = [max(Vmanual1.x, Vmanual2.x), max(Vmanual1.y, Vmanual2.y), 3];
+// mats
+Vmtrash = [200, 110, 1.5];
+Vmseaside = [82.5, 126.5, 1.05];  // 1mm each but the float adds up
+Nmseaside = 3 * Nplayers;  // three sets of player mats
+Vmprosperity = [80, 80, 1.15];
+Nmprosperity = 9;  // 8 VP mats + 1 Trade Route mat
+// Adventures tokens
+// TODO: verify dimensions found online
+Hadventures = 2;  // token thickness
+Dadvround = 23;  // round token diameter
+Nadvround = 8 * Nplayers;
+Vadvsquare = [44, 34, 2];  // square token dimensions
+Nadvsquare = 2 * Nplayers;
 
 // container metrics
 Hlid = floor0;  // height of cap lid
@@ -272,20 +283,10 @@ Dthumb = 25;  // index hole diameter
 
 // vertical layout
 Hroom = ceil(Vinterior.z - Vmanual.z) - 1;
-function tier_height(k) = k ? flayer(Hroom/k) : Vinterior.z;
-function tier_number(z) = floor(Hroom/z);
-function tier_ceil(z) = tier_height(tier_number(z));
-function tier_room(z) = tier_ceil(z) - z;
-
-// general layout
-// designed around box quadrants with some diagonal space across the center
-// reserved for focus bar storage.  the focus bars themselves sit to one side,
-// but the walls span the midline for stabilitiy.
-Rfloor = norm(Vfloor) / 2;  // major radius of box = 203.64mm
-Vtray = [135, 85];  // small tray block
-// main tier heights: two thick layers + one thinner top layer
-Htier = 25;
-Htop = 15;
+Hdeck = 65;
+Htray = 27;
+Hhalf = flayer(Htray/2);
+echo(Hroom=Hroom, Hdeck=Hdeck, Htray=Htray, Hhalf=Hhalf);
 
 module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
              scale=1, center=false) {
@@ -355,7 +356,7 @@ module wall_vee_cut(size, a=Avee, gap=wall0/2) {
 
 function deck_box_volume(d) = vround([  // d = box length
     Vcard.y + 2*Rext, d,
-    Vcard.x + floor(floor0+0.5)]);
+    round(Vcard.x + floor0 + 1)]);
 function card_tray_volume(v) = vround([
     v.x + 2*Rext,
     v.y + 2*Rext,
@@ -368,7 +369,7 @@ Vshort = deck_box_volume(Dshort);
 clong = card_count(Vlong.y-2*Rext, sk_standard);
 cshort = card_count(Vshort.y-2*Rext, sk_standard);
 echo(clong=clong, cshort=cshort, total=8*clong+2*cshort);
-module deck_box(d, seed=0, piles=undef, color=undef) {
+module deck_box(d, seed=undef, color=undef) {
     vbox = deck_box_volume(d);
     shell = [vbox.x, vbox.y];
     well = shell - 2*[wall0, wall0];
@@ -395,11 +396,13 @@ module deck_box(d, seed=0, piles=undef, color=undef) {
                 rotate(90) wall_vee_cut(vside, a=aside);
         }
     }
-    %raise(floor0+gap0) random_piles(d-2*Rext, seed=seed, colors=piles);
+    %if (!is_undef(seed))
+        translate([0, Rext-d/2, floor0+epsilon])
+            random_piles(d-2*Rext, seed=seed);
 }
 
 card_colors = [
-    "#c0c0d0",  // action (gray)
+    "#f0f0ff",  // action (gray)
     "#ffff00",  // treasure (yellow)
     "#a0a0ff",  // reaction (blue)
     "#00ff00",  // victory (green)
@@ -411,37 +414,80 @@ card_colors = [
     "#ffc080",  // reserve (tan)
     "#c00000",  // shelter(red)
 ];
+player_colors = [
+    "#ff0000",
+    "#ff8000",
+    "#ffff00",
+    "#00ff00",
+    "#a0a0ff",
+    "#ffffff",
+];
 function supply_pile_size(n, index=false) =
     n*Hcard + (index ? 2*index_card : 0);
-module supply_pile(n=10, index=false, color=card_colors[0]) {
-    h = supply_pile_size(n);
-    spin = index ? [0, 90, -90] : 0;
-    margin = 5;
-    vwrap = [Vcard.y-2*margin, h+2*index_card, Vcard.x-margin];
+module supply_pile(n=10, index=false, up=false, color=card_colors[0]) {
+    hcards = supply_pile_size(n);
+    hindex = supply_pile_size(n, index=index);
+    spin = index || up ? [0, -90, -90] : 0;
     color(color, 0.5) union() {
-        raise(index ? Vcard.x/2 : 0) rotate(spin)
-            prism(h, Vcard, center=index);
-        if (index) hull() {
+        raise(spin ? Vcard.x/2 : 0) rotate(spin)
+            raise(index ? index_card : 0) prism(hcards, Vcard);
+        if (index) index_wrapper(n=n, solid=true, color=color);
+    }
+    translate(spin ? [0, hindex, 0] : [0, 0, hcards]) children();
+}
+module index_wrapper(n=10, solid=false, color=card_colors[0]) {
+    h = supply_pile_size(n);
+    margin = 4.5;
+    vwrap = [Vcard.y-2*margin, h+2*index_card, Vcard.x-margin];
+    color(color, 0.5) difference() {
+        translate([0, h/2+index_card]) hull() {
             raise(margin)
                 prism(vwrap.z, [vwrap.x, vwrap.y]);
             raise(Vcard.x) rotate([90, 0, 90])
                 prism(Vcard.y-2*margin, center=true)
                 stadium_fill([vwrap.y, 2*index_card]);
         }
+        if (!solid)
+            raise(Vcard.x/2) rotate([0, 90, -90]) prism(h, Vcard, center=true);
     }
 }
-Vcolordist = [0, 0, 0, 0, 0, 1, 2, 2, 5, 6];
+Vcolordist = [0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 5, 6];
 function random_colors(n=1, seed=0, weights=Vcolordist) =
-    [for (i=rands(0, 1, n, seed)) card_colors[weights[floor(i*len(weights))]]];
-module random_piles(d, seed=0, colors=undef) {
+    [for (x=rands(0, 0.9999, n, seed))
+        card_colors[weights[floor(x*len(weights))]]];
+module index_piles(d, n=undef, cards=10, colors=[card_colors[0]]) {
+    dy = supply_pile_size(cards, index=true);
+    piles = is_undef(n) ? floor(d/dy) : n;
+    for (i=[0:1:piles-1]) translate([0, i*dy]) {
+        supply_pile(n=cards, index=true, color=colors[i % len(colors)]);
+    }
+    translate([0, dy*piles]) children();
+}
+module random_piles(d, seed=0) {
     d10 = supply_pile_size(10, index=true);
     d12 = supply_pile_size(12, index=true);
-    // TODO: victory card piles
-    nmax = floor(d / d10);
-    n = is_undef(colors) ? nmax : len(colors) * floor(nmax/len(colors));
-    c = is_undef(colors) ? random_colors(n, seed=seed) : colors;
-    for (i=[0:1:n-1]) translate([0, d/2 - (i+1/2)*d10]) {
-        supply_pile(index=true, color=c[i % len(c)]);
+    nx = rands(0, 0.9999, 2, seed);
+    ncmax = floor(d / d10);
+    skip = floor(ncmax*nx[0]/4);
+    nc = ncmax - skip;
+    dc = nc*d10;
+    dv = d - dc;
+    nvmax = floor(min(dv / d12, skip/2));
+    nv = floor(nvmax*nx[0]);
+    c = random_colors(nc, seed=seed+1);
+    index_piles(dv, nv, cards=12, colors=[card_colors[3]])
+    index_piles(dc, nc, cards=10, colors=c);
+}
+module starter_decks(d, n=6) {
+    dy = supply_pile_size(20, index=true);
+    for (i=[0:1:n-1]) {
+        translate([0, i*dy]) {
+            index_wrapper(n=20, color=player_colors[i]);
+            supply_pile(7, up=true, color=card_colors[1])
+            supply_pile(3, up=true, color=card_colors[3])
+            supply_pile(3, up=true, color=card_colors[10])
+            supply_pile(7, up=true, color=card_colors[1]);
+        }
     }
 }
 
@@ -503,11 +549,16 @@ module organizer() {
         card_colors[1], card_colors[3], card_colors[1], card_colors[10],
     ];
     %color("#101080", 0.25) box(Vinterior, frame=true);
-    for (k=[-1,+1]) scale([1, k]) translate([0, Vfloor.y/2+gap0/2]) {
-        translate([0, gap0/2-Vshort.x/2]) rotate(90)
-            deck_box(Dshort, piles=k<0 ? randomizers : starters);
+    for (k=[-1,+1]) scale([1, k]) translate([0, Vfloor.y/2-gap0/2]) {
+        translate([0, gap0/2-Vshort.x/2]) rotate(-90) {
+            deck_box(Dshort);
+            translate([0, Rext-Dshort/2]) {
+                if (0<k) starter_decks(Dshort);
+                else index_piles(Dshort, cards=25, colors=["#80c0ff"]);
+            }
+        }
         for (j=[-1,+1]) scale([j, 1]) translate([Vshort.y/2-Vlong.x/2, 0])
-            for (i=[1,2]) translate([i*(Vlong.x+gap0), -Vlong.y/2])
+            for (i=[1,2]) translate([i*(Vlong.x+gap0), Vlong.y/2-Vfloor.y])
                 deck_box(Dlong, seed=k*100+j*10+i);
     }
     // TODO: manuals

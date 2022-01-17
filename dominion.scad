@@ -94,6 +94,7 @@ yellow_sleeve = [44, 67];  // Mini American
 catan_sleeve = [56, 82];  // Catan (English)
 
 // Sleeve Kings sleeves
+euro_sleeve = [62, 94];  // Standard European
 super_large_sleeve = [104, 129];
 
 // sleeve thickness
@@ -115,28 +116,28 @@ function vdeck(n=1, sleeve, quality, card=dominion_card, wide=false) = [
     wide ? min(sleeve.x, sleeve.y) : max(sleeve.x, sleeve.y),
     n*(quality+card)];
 
-echo(vdeck(70, purple_sleeve, ug_premium));  // ultimate guard premium soft
-echo(vdeck(286, purple_sleeve, ug_premium)+[0, 0, 27*2*index_card]);
-echo(vdeck(286, purple_sleeve, sk_standard)+[0, 0, 27*2*index_card]);
+echo(vdeck(70, euro_sleeve, ug_premium));  // ultimate guard premium soft
+echo(vdeck(286, euro_sleeve, ug_premium)+[0, 0, 27*2*index_card]);
+echo(vdeck(286, euro_sleeve, sk_standard)+[0, 0, 27*2*index_card]);
 // measured card sizes
 // 3.5mm / 16 index card layers = 440 microns/pile (220 per index card layer)
 // victory cards (sets of 12)
-echo(v12=5.0/12, vdeck(12, purple_sleeve, ug_premium));
+echo(v12=5.0/12, vdeck(12, euro_sleeve, ug_premium));
 // 4.8-5.0mm w/UG sleeves = 400-417 microns/card
 // 5.2-5.5mm w/index cover = 450 microns/pile (225 per index card layer)
 // action cards (sets of 10)
-echo(a10=4.2/10, vdeck(10, purple_sleeve, ug_premium));
+echo(a10=4.2/10, vdeck(10, euro_sleeve, ug_premium));
 // 4.0-4.2mm w/UG sleeves = 400-420 microns/card
 // 4.4-4.6mm w/index cover = 400 microns/pile (200 per index card layer)
 // silver cards (set of 70)
-echo(s70=29/70, vdeck(70, purple_sleeve, ug_premium));
+echo(s70=29/70, vdeck(70, euro_sleeve, ug_premium));
 // 29mm / 70 Dominion cards = 414 microns/card
 // gold cards (set of 48)
-echo(g48=20.0/48, vdeck(48, purple_sleeve, ug_premium));
+echo(g48=20.0/48, vdeck(48, euro_sleeve, ug_premium));
 // 19.7-20.5mm w/UG sleeves = 410-427 microns/card
 // gold cards (set of 30)
-echo(g30=12.6/30, vdeck(30, purple_sleeve, ug_premium));
-echo(g30=9.6/30, vdeck(30, purple_sleeve, no_sleeve));
+echo(g30=12.6/30, vdeck(30, euro_sleeve, ug_premium));
+echo(g30=9.6/30, vdeck(30, euro_sleeve, no_sleeve));
 // 12.3-12.7mm w/UG sleeves = 410-423 microns/card
 // 9.2-9.6mm unsleeved = 307-320 microns/card
 
@@ -284,25 +285,6 @@ Vtray = [135, 85];  // small tray block
 Htier = 25;
 Htop = 15;
 
-Dtall = purple_sleeve.x + 2*Rext;
-Dwide = purple_sleeve.y + 2*Rext;
-Xtall = Vfloor.x/Dtall;
-Xwide = Vfloor.x/Dwide;
-Ytall = Vfloor.y/Dtall;
-Ywide = Vfloor.y/Dwide;
-Xcards = card_count(Vfloor.x - 8*Rext, sk_standard);
-Ycards = card_count(Vfloor.y - 4*Rext, sk_standard);
-Xmid = Vfloor.x - (Dwide*floor(Xwide));
-echo(Dtall=Dtall, Dwide=Dwide);
-echo(Xtall=Xtall, Xwide=Xwide);
-echo(Ytall=Ytall, Ywide=Ywide);
-echo(Xcards=Xcards, Ycards=Ycards);
-echo(floor(Xtall) * Ycards);
-echo(floor(Xwide) * Ycards);
-echo(floor(Ytall) * Xcards);
-echo(floor(Ywide) * Xcards);
-echo(Xmid=Xmid);
-
 module prism(h, shape=undef, r=undef, r1=undef, r2=undef, scale=1) {
     module curve() {
         ri = !is_undef(r1) ? r1 : !is_undef(r) ? r : 0;  // inside turns
@@ -346,7 +328,7 @@ module lattice_cut(v, i, j=0, h0=0, d=4.8, a=Avee, r=Rint,
         scale([1, 1, flip]) rotate([90, 0, 0]) linear_extrude(dycut)
         offset(r=r) offset(r=-d/2-r) polygon(tri[sign(half)+1]);
 }
-module wall_vee_cut(size, a=Avee, gap=gap0) {
+module wall_vee_cut(size, a=Avee, gap=wall0/2) {
     span = size.x;
     y0 = -2*Rext;
     y1 = size.z;
@@ -368,65 +350,64 @@ module wall_vee_cut(size, a=Avee, gap=gap0) {
     }
 }
 
-// focus bar components & containers
-module focus_bar(v, color=5) {
-    k = floor(v.x / 60);
-    module focus(n, cut=false) {
-        origin = [-60 * (k+1)/2, 0];
-        translate(origin + [60 * n, 0]) if (cut) {
-            cube([50, 12, 2*v.z], center=true);
-        } else {
-            difference() {
-                color("tan", 0.60) cube([50, 12, v.z], center=true);
-                cube([48, 10, 2*v.z], center=true);
-            }
-            color("olivedrab", 0.60) cube([48, 10, v.z], center=true);
-        }
-    }
-    raise(v.z/2) {
-        difference() {
-            color("tan", 0.60) cube(v, center=true);
-            cube([k*60, 16, 2*v.z], center=true);
-        }
-        c = is_num(color) ? player_colors[color] : color;
-        color(c, 0.60) difference() {
-            cube([k*60, 16, v.z], center=true);
-            for (n=[1:k]) focus(n, cut=true);
-        }
-        for (n=[1:k]) focus(n);
-    }
-}
-
-// TODO: adapt these to Dominion cards
-function deck_box_volume(v) = vround([
-    v.y + 2*Rext,
-    v.z + 2*wall0,  // TODO: might be too snug for the universal deck
-    v.x + Rtop + floor0]);
+function deck_box_volume(d) = vround([  // d = box length
+    euro_sleeve.y + 2*Rext, d,
+    euro_sleeve.x + floor(floor0+0.5)]);
 function card_tray_volume(v) = vround([
     v.x + 2*Rext,
     v.y + 2*Rext,
     v.z + Rtop + floor0]);
 
-// player focus decks: Gamegenic green sleeves
-Vdeck = vdeck(29, purple_sleeve, sk_standard);
-Vdbox0 = deck_box_volume(Vdeck);
-Vdbox = vround([Vdbox0.x, 20, Vdbox0.z]);
-assert(vfit(Vdbox, Vdbox, "DECK BOX"));
-module deck_box(v=Vdeck, color=undef) {
-    vbox = deck_box_volume(v);
-    well = vbox - 2*[wall0, wall0];
+Dlong = Vfloor.y / 2;
+Vlong = deck_box_volume(Dlong);
+Dshort = Vfloor.x - 4*Vlong.x;
+Vshort = deck_box_volume(Dshort);
+clong = card_count(Vlong.y-2*Rext, sk_standard);
+cshort = card_count(Vshort.y-2*Rext, sk_standard);
+echo(clong=clong, cshort=cshort, total=8*clong+2*cshort);
+module deck_box(d, color=undef) {
+    vbox = deck_box_volume(d);
+    shell = [vbox.x, vbox.y];
+    well = shell - 2*[wall0, wall0];
     // notch dimensions:
     hvee = qlayer(vbox.z/2);  // half the height of the box
-    dvee = 2*hvee*cos(Avee);  // point of the vee exactly at the base
-    vee = [dvee, vbox.y, vbox.z-hvee];
+    dvee = 2*hvee/tan(Avee);  // point of the vee exactly at the base
+    dtop = 2*vbox.z/tan(Avee);  // width of the vee at the top
+    dcorner = (vbox.x - dtop) / 2;  // width of the corner wall top
+    aside = max(Avee, atan(vbox.z / (vbox.y/2 - dcorner)));
+    dside = vbox.y - 2*dcorner - 2*(vbox.z-hvee)/tan(aside);
+    vend = [dvee, vbox.y, vbox.z-hvee];
+    vside = [dside, vbox.x, vbox.z-hvee];
     color(color) difference() {
-        linear_extrude(vbox.z)
-            rounded_square(Rext, [vbox.x, vbox.y]);
-        raise() linear_extrude(vbox.z)
-            rounded_square(Rint, [well.x, well.y]);
-        raise(hvee) wall_vee_cut(vee);
+        // outer shell
+        prism(vbox.z, shell, r=Rext);
+        // card well
+        raise() prism(vbox.z, well, r=Rint);
+        // base round
+        raise(-gap0) prism(vbox.z, shell - [Dthumb, Dthumb], r=Dthumb/2);
+        // wall cuts
+        raise(hvee) {
+            wall_vee_cut(vend);  // end cuts
+            if (2*dcorner+Rtop <= vbox.y)  // side cuts, if they fit
+                rotate(90) wall_vee_cut(vside, a=aside);
+        }
     }
-    %raise(floor0 + Vdeck.x/2) rotate([0, 90, 90]) cube(Vdeck, center=true);
+}
+
+card_colors = [
+    "#c0c0c0",  // action (gray)
+    "#ffff00",  // treasure (yellow)
+    "#c0c0ff",  // reaction (blue)
+    "#00ff00",  // victory (green)
+    "#8000ff",  // curse (purple)
+    "#8060ff",  // attack (light purple)
+    "#ff8000",  // duration (orange)
+    "#806000",  // ruins (brown)
+    "#202020",  // night (black)
+    "#ff8060",  // reserve (tan)
+];
+module supply_pile(n, index=false, color=card_colors[0]) {
+    prism();
 }
 
 module card_well(deck, tray=undef, a=Avee, gap=gap0) {
@@ -483,6 +464,12 @@ module organizer() {
     // box shape and manuals
     // everything needs to fit inside this!
     %color("#101080", 0.25) box(Vinterior, frame=true);
+    for (k=[-1,+1]) scale([1, k]) translate([0, Vfloor.y/2+gap0/2]) {
+        translate([0, gap0/2-Vshort.x/2]) rotate(90) deck_box(Dshort);
+        for (j=[-1,+1]) scale([j, 1]) translate([Vshort.y/2-Vlong.x/2, 0])
+            for (i=[1,2]) translate([i*(Vlong.x+gap0), -Vlong.y/2])
+                deck_box(Dlong);
+    }
     // TODO: manuals
     // TODO: trash board
     // TODO: basic cards
@@ -502,6 +489,9 @@ module organizer() {
 // tests for card trays
 module test_trays() {
 }
+
+*deck_box(Dlong);
+*deck_box(Dshort);
 
 *test_trays();
 organizer();

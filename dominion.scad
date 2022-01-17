@@ -71,6 +71,8 @@ function vtrace(title, vxmin, vsmin, vspec) =  // returns undef
     echo(title) echo(vspec=vspec) echo(vsmin=vsmin) echo(vxmin=vxmin)
     echo(inch=[for (i=vspec) eround(i/inch)]);
 
+function sum(v) = v ? [for(p=v) 1]*v : 0;
+
 // card dimensions
 card = [2.5*inch, 3.5*inch];  // standard playing card dimensions
 euro_card = [59, 92];
@@ -222,7 +224,7 @@ Hwrap0 = 53;  // cover art wrap ends here
 Hwrap1 = 56;  // avoid stacks between 53-56mm total height
 module box(size, wall=1, frame=false, a=0) {
     vint = is_list(size) ? size : [size, size, size];
-    vext = [vint.x + 2*wall, vint.y + 2*wall, vint.z + wall];
+    vext = [vint.x + 2*wall, vint.y + 2*wall, vint.z + wall + gap0];
     vcut = [vint.x, vint.y, vint.z - wall];
     origin = [0, 0, vext.z/2 - wall];
     translate(origin) rotate(a) {
@@ -252,11 +254,16 @@ Vmanual1 = [210, 297];  // approximate (Dominion, Intrigue, Seaside)
 Vmanual2 = [235, 286];  // approximate (Prosperity)
 Vmanual = [max(Vmanual1.x, Vmanual2.x), max(Vmanual1.y, Vmanual2.y), 3];
 // mats
+// TODO: verify dimensions found online
 Vmtrash = [200, 110, 1.5];
-Vmseaside = [82.5, 126.5, 1.05];  // 1mm each but the float adds up
-Nmseaside = 3 * Nplayers;  // three sets of player mats
+Vmexile = [128, 84, 1.5];  // TODO: verify
+Vmvillagers = [84, 128, 1.5];  // TODO: verify
+Vmcoffers = [126, 84, 1.5];  // TODO: verify
+Vmseaside = [82.5, 126.5, 3.05];  // 3 mats, ~1mm each
+Vmtavern = [125, 82, 1.5];  // TODO: verify
 Vmprosperity = [80, 80, 1.15];
 Nmprosperity = 9;  // 8 VP mats + 1 Trade Route mat
+Lmats = [Vmexile, Vmvillagers, Vmcoffers, Vmseaside, Vmtavern, Vmprosperity];
 // Adventures tokens
 // TODO: verify dimensions found online
 Hadventures = 2;  // token thickness
@@ -357,6 +364,8 @@ module wall_vee_cut(size, a=Avee, gap=wall0/2) {
 function deck_box_volume(d) = vround([  // d = box length
     Vcard.y + 2*Rext, d,
     round(Vcard.x + floor0 + 1)]);
+function deck_frame_volume(d) = vround([  // d = frame length
+    Vcard.x + 2*Rext, d, Vcard.y]);
 function card_tray_volume(v) = vround([
     v.x + 2*Rext,
     v.y + 2*Rext,
@@ -364,10 +373,12 @@ function card_tray_volume(v) = vround([
 
 Dlong = Vfloor.y / 2;
 Vlong = deck_box_volume(Dlong);
-Dshort = Vfloor.x - 4*Vlong.x;
-Vshort = deck_box_volume(Dshort);
+Dtall = Vfloor.x - 4*Vlong.x;
+Vtall = deck_frame_volume(Dtall);
+Vmats = [Vfloor.y - 2*Vtall.x, Dtall, Vcard.y];
+echo(Vtall, Vmats);
 clong = card_count(Vlong.y-2*Rext, sk_standard);
-cshort = card_count(Vshort.y-2*Rext, sk_standard);
+cshort = card_count(Vtall.y-2*Rext, sk_standard);
 echo(clong=clong, cshort=cshort, total=8*clong+2*cshort);
 module deck_box(d, seed=undef, color=undef) {
     vbox = deck_box_volume(d);
@@ -400,6 +411,54 @@ module deck_box(d, seed=undef, color=undef) {
         translate([0, Rext-d/2, floor0+epsilon])
             random_piles(d-2*Rext, seed=seed);
 }
+module area_frame(size, color=undef) {
+    shell = [size.x, size.y];
+    well = shell - 2*[wall0, wall0];
+    // notch dimensions:
+    dcorner = (Vlong.x - 2*Vlong.z/tan(Avee)) / 2;  // match deck box
+    hvee = qlayer(Vlong.z/2);  // match deck box
+    axvee = max(atan(size.z / (size.x/2 - dcorner)), Avee);
+    ayvee = max(atan(size.z / (size.y/2 - dcorner)), Avee);
+    dxvee = size.x - 2*dcorner - 2*(size.z-hvee) / tan(axvee);
+    dyvee = size.y - 2*dcorner - 2*(size.z-hvee) / tan(ayvee);
+    echo(axvee, dxvee, ayvee, dyvee);
+    vxside = [dxvee, size.y, size.z-hvee];
+    vyside = [dyvee, size.x, size.z-hvee];
+    color(color) difference() {
+        // outer shell
+        prism(size.z, shell, r=Rext);
+        // card well
+        raise(-gap0) prism(size.z+2*gap0, well, r=Rint);
+        // wall cuts
+        raise(hvee) {
+            wall_vee_cut(vxside, a=axvee);  // end cuts
+            rotate(90) wall_vee_cut(vyside, a=ayvee);  // side cuts
+        }
+    }
+}
+module deck_frame(d, seed=undef, color=undef) {
+    vframe = deck_frame_volume(d);
+    area_frame(vframe, color=color);
+    %if (!is_undef(seed))
+        translate([0, Rext-d/2, floor0+epsilon])
+            random_piles(d-2*Rext, seed=seed);
+}
+module player_mats(d, n=Nplayers, lean=true) {
+    vmat = [for (mat=Lmats) [max(mat.x, mat.y), min(mat.x, mat.y), mat.z]];
+    dstack = sum([for (mat=vmat) mat.z]);
+    ylean = d - n*dstack + Rint;
+    hpile = max([for (mat=vmat) mat.y]);
+    echo(hpile, ylean);
+    lean(hpile, ylean, lean ? 0 : 90)
+    for (i=[0:1:n-1]) {
+        translate([0, n*dstack-d/2]) rotate([90, 0, 0])
+        raise(i*dstack) for (j=[0:1:len(vmat)-1]) {
+            mat = vmat[j];
+            dy = sum([for (k=[0:1:j-1]) vmat[k].z]);
+            translate([0, mat.y/2, dy]) prism(mat.z, [mat.x, mat.y]);
+        }
+    }
+}
 
 card_colors = [
     "#f0f0ff",  // action (gray)
@@ -424,42 +483,48 @@ player_colors = [
 ];
 function supply_pile_size(n, index=false) =
     n*Hcard + (index ? 2*index_card : 0);
-module supply_pile(n=10, index=false, up=false, color=card_colors[0]) {
+module supply_pile(n=10, index=false, up=false, wide=true,
+                   color=card_colors[0]) {
     hcards = supply_pile_size(n);
     hindex = supply_pile_size(n, index=index);
-    spin = index || up ? [0, -90, -90] : 0;
+    spin = index || up ? wide ? [0, -90, -90] : [-90, 0, 0] : 0;
     color(color, 0.5) union() {
-        raise(spin ? Vcard.x/2 : 0) rotate(spin)
+        raise(spin ? wide ? Vcard.x/2 : Vcard.y/2 : 0) rotate(spin)
             raise(index ? index_card : 0) prism(hcards, Vcard);
-        if (index) index_wrapper(n=n, solid=true, color=color);
+        if (index) index_wrapper(n=n, solid=true, wide=wide,color=color);
     }
     translate(spin ? [0, hindex, 0] : [0, 0, hcards]) children();
 }
-module index_wrapper(n=10, solid=false, color=card_colors[0]) {
+module index_wrapper(n=10, solid=false, wide=true, color=card_colors[0]) {
     h = supply_pile_size(n);
     margin = 4.5;
-    vwrap = [Vcard.y-2*margin, h+2*index_card, Vcard.x-margin];
+    vwrap = wide ?
+        [Vcard.y-2*margin, h+2*index_card, Vcard.x-margin] :
+        [Vcard.x-2*margin, h+2*index_card, Vcard.y-margin];
     color(color, 0.5) difference() {
         translate([0, h/2+index_card]) hull() {
             raise(margin)
                 prism(vwrap.z, [vwrap.x, vwrap.y]);
-            raise(Vcard.x) rotate([90, 0, 90])
-                prism(Vcard.y-2*margin, center=true)
+            raise(vwrap.z+margin) rotate([90, 0, 90])
+                prism(vwrap.x, center=true)
                 stadium_fill([vwrap.y, 2*index_card]);
         }
         if (!solid)
-            raise(Vcard.x/2) rotate([0, 90, -90]) prism(h, Vcard, center=true);
+            raise((vwrap.z+margin)/2)
+                rotate(wide ? [0, -90, -90] : [-90, 0, 0])
+                raise(index_card) prism(h, Vcard);
     }
 }
 Vcolordist = [0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 5, 6];
 function random_colors(n=1, seed=0, weights=Vcolordist) =
     [for (x=rands(0, 0.9999, n, seed))
         card_colors[weights[floor(x*len(weights))]]];
-module index_piles(d, n=undef, cards=10, colors=[card_colors[0]]) {
+module index_piles(d, n=undef, cards=10, wide=true, colors=[card_colors[0]]) {
     dy = supply_pile_size(cards, index=true);
     piles = is_undef(n) ? floor(d/dy) : n;
     for (i=[0:1:piles-1]) translate([0, i*dy]) {
-        supply_pile(n=cards, index=true, color=colors[i % len(colors)]);
+        supply_pile(n=cards, index=true, wide=wide,
+                    color=colors[i % len(colors)]);
     }
     translate([0, dy*piles]) children();
 }
@@ -478,17 +543,37 @@ module random_piles(d, seed=0) {
     index_piles(dv, nv, cards=12, colors=[card_colors[3]])
     index_piles(dc, nc, cards=10, colors=c);
 }
-module starter_decks(d, n=6) {
+module lean(h, d, amin=0) {
+    alean = max(acos(d/h), amin);
+    mlean = [
+        [1, 0, 0, 0],
+        [0, 1, cos(alean), 0],
+        [0, 0, sin(alean), 0],
+    ];
+    multmatrix(m=mlean) children();
+}
+module starter_decks(d, n=Nplayers, wide=false, lean=false) {
     dy = supply_pile_size(20, index=true);
-    for (i=[0:1:n-1]) {
+    ylean = d - n*dy + Rint;
+    hpile = (wide ? Vcard.x : Vcard.y) + index_card;
+    lean(hpile, ylean, lean ? 0 : 90) for (i=[0:1:n-1]) {
         translate([0, i*dy]) {
-            index_wrapper(n=20, color=player_colors[i]);
-            supply_pile(7, up=true, color=card_colors[1])
-            supply_pile(3, up=true, color=card_colors[3])
-            supply_pile(3, up=true, color=card_colors[10])
-            supply_pile(7, up=true, color=card_colors[1]);
+            index_wrapper(n=20, wide=wide, color=player_colors[i]);
+            translate([0, index_card]) {
+                supply_pile(7, up=true, wide=wide, color=card_colors[1])
+                supply_pile(3, up=true, wide=wide, color=card_colors[3])
+                supply_pile(3, up=true, wide=wide, color=card_colors[10])
+                supply_pile(7, up=true, wide=wide, color=card_colors[1]);
+            }
         }
     }
+}
+module randomizers(d, cards=6*26, wide=false, lean=false) {
+    dy = supply_pile_size(cards, index=true);
+    ylean = d - dy + Rint;
+    hpile = (wide ? Vcard.x : Vcard.y) + index_card;
+    lean(hpile, ylean, lean ? 0 : 90)
+        supply_pile(cards, up=true, wide=wide, color="#80c0ff");
 }
 
 module card_well(deck, tray=undef, a=Avee, gap=gap0) {
@@ -550,16 +635,20 @@ module organizer() {
     ];
     %color("#101080", 0.25) box(Vinterior, frame=true);
     for (k=[-1,+1]) scale([1, k]) translate([0, Vfloor.y/2-gap0/2]) {
-        translate([0, gap0/2-Vshort.x/2]) rotate(-90) {
-            deck_box(Dshort);
-            translate([0, Rext-Dshort/2]) {
-                if (0<k) starter_decks(Dshort);
-                else index_piles(Dshort, cards=25, colors=["#80c0ff"]);
+        translate([0, gap0-Vtall.x/2]) rotate(-90) {
+            deck_frame(Dtall);
+            translate([0, Rext-Dtall/2]) {
+                if (0<k) starter_decks(Dtall-2*Rext, lean=true);
+                else randomizers(Dtall-2*Rext, lean=true);
             }
         }
-        for (j=[-1,+1]) scale([j, 1]) translate([Vshort.y/2-Vlong.x/2, 0])
+        for (j=[-1,+1]) scale([j, 1]) translate([Vtall.y/2-Vlong.x/2, 0])
             for (i=[1,2]) translate([i*(Vlong.x+gap0), Vlong.y/2-Vfloor.y])
                 deck_box(Dlong, seed=k*100+j*10+i);
+    }
+    rotate(-90) {
+        area_frame(Vmats);
+        %player_mats(Vmats.y-2*Rext);
     }
     // TODO: manuals
     // TODO: trash board
@@ -582,7 +671,7 @@ module test_trays() {
 }
 
 *deck_box(Dlong);
-*deck_box(Dshort);
+*deck_frame(Dtall);
 
 *test_trays();
 organizer();

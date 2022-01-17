@@ -411,7 +411,7 @@ module deck_box(d, seed=undef, color=undef) {
         translate([0, Rext-d/2, floor0+epsilon])
             random_piles(d-2*Rext, seed=seed);
 }
-module area_frame(size, color=undef) {
+module area_frame(size, bottom=false, color=undef) {
     shell = [size.x, size.y];
     well = shell - 2*[wall0, wall0];
     // notch dimensions:
@@ -421,14 +421,17 @@ module area_frame(size, color=undef) {
     ayvee = max(atan(size.z / (size.y/2 - dcorner)), Avee);
     dxvee = size.x - 2*dcorner - 2*(size.z-hvee) / tan(axvee);
     dyvee = size.y - 2*dcorner - 2*(size.z-hvee) / tan(ayvee);
-    echo(axvee, dxvee, ayvee, dyvee);
     vxside = [dxvee, size.y, size.z-hvee];
     vyside = [dyvee, size.x, size.z-hvee];
     color(color) difference() {
         // outer shell
         prism(size.z, shell, r=Rext);
-        // card well
-        raise(-gap0) prism(size.z+2*gap0, well, r=Rint);
+        // card well (full depth if bottom == false)
+        raise(bottom ? floor0 : -gap0) prism(size.z+2*gap0, well, r=Rint);
+        // base round
+        echo(size, [shell.x/2-Dthumb, shell.y-Dthumb]);
+        raise(-gap0) for(i=[-1,+1]) translate([i*(shell.x/4-Dthumb/9), 0])
+            prism(size.z, [shell.x/2-Dthumb, shell.y-Dthumb], r=Dthumb/2);
         // wall cuts
         raise(hvee) {
             wall_vee_cut(vxside, a=axvee);  // end cuts
@@ -647,8 +650,8 @@ module organizer() {
                 deck_box(Dlong, seed=k*100+j*10+i);
     }
     rotate(-90) {
-        area_frame(Vmats);
-        %player_mats(Vmats.y-2*Rext);
+        area_frame(Vmats, bottom=true);
+        %raise(floor0+epsilon) player_mats(Vmats.y-2*Rext);
     }
     // TODO: manuals
     // TODO: trash board
@@ -672,6 +675,7 @@ module test_trays() {
 
 *deck_box(Dlong);
 *deck_frame(Dtall);
+*area_frame(Vmats, bottom=true);
 
 *test_trays();
 organizer();

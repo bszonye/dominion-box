@@ -219,9 +219,7 @@ module tongue(size, h=floor0, h0=undef, h1=undef, h2=undef,
 // box metrics
 Vfloor = [475, 288];  // box floor
 Vinterior = [Vfloor.x, Vfloor.y, 94];  // box interior
-// TODO: measure art wrap
-Hwrap0 = 53;  // cover art wrap ends here
-Hwrap1 = 56;  // avoid stacks between 53-56mm total height
+Hwrap = 79;  // cover art wrap ends here, approximately
 module box(size, wall=1, frame=false, a=0) {
     vint = is_list(size) ? size : [size, size, size];
     vext = [vint.x + 2*wall, vint.y + 2*wall, vint.z + wall + gap0];
@@ -237,8 +235,8 @@ module box(size, wall=1, frame=false, a=0) {
                     translate(2*i*unit_axis(n)*wall) cube(vcut, center=true);
             }
         }
-        raise(Hwrap0 + wall-vext.z/2)
-            linear_extrude(Hwrap1-Hwrap0) difference() {
+        raise(Hwrap + wall-vext.z/2)
+            linear_extrude(1) difference() {
             square([vint.x+wall, vint.y+wall], center=true);
             square([vint.x, vint.y], center=true);
         }
@@ -387,7 +385,8 @@ module deck_box(d, seed=undef, color=undef) {
     hvee = qlayer(vbox.z - dtop/2 * sin(Avee));
     vend = [dtop/2, vbox.y, vbox.z-hvee];
     ystrut = Dstrut + Htray/tan(Avee);
-    hside = Dstrut;
+    hside = hvee;
+    // hside = Dstrut;
     // hside = qlayer(vbox.z - (vbox.y/2 - ystrut) * sin(Avee));  // hexagon
     dside = vbox.y - 2*ystrut - 2*(vbox.z-hside)/tan(Avee);
     vside = [dside, vbox.x, vbox.z-hside];
@@ -619,6 +618,28 @@ module card_tray(deck, tray=undef, color=undef) {
     %raise(floor0 + deck.z/2) cube(deck, center=true);
 }
 
+Htier = [
+    0,
+    Htray/2,        // 13.5 mm
+    Htray,          // 27 mm
+    Hdeck,          // 65 mm
+    Hdeck+Htray/2,  // 78.5 mm
+    Hdeck+Htray,    // 92 mm
+];
+function tier(n, gap=gap0/2) = max(0, Htier[n] + (n-1)*gap);
+module raise_tier(n, gap=gap0/2) {
+    translate([0, 0, tier(n, gap)]) children();
+}
+module layout_section(n, gap=gap0) {
+    x = floor(n / 4) + 1;  // lower inside, higher outside
+    sx = 1 - 2 * (floor(n / 2) % 2);  // alternating right and left
+    sy = 2 * (n % 2) - 1;  // alternating front and back
+    dy = Vlong.y/2 - Vfloor.y/2 - gap/2;
+    dx = Vshort.y/2 - Vlong.x/2 + x*(Vlong.x+gap);
+    scale([sx, sy]) translate([dx, dy]) children();
+}
+for (i=[0:1:7]) layout_section(i);
+
 module organizer() {
     // box shape and manuals
     // everything needs to fit inside this!
@@ -626,24 +647,24 @@ module organizer() {
         card_colors[1], card_colors[3], card_colors[1], card_colors[10],
     ];
     %color("#101080", 0.25) box(Vinterior, frame=true);
-    for (k=[-1,+1]) scale([1, k]) translate([0, Vfloor.y/2-gap0/2]) {
-        for (j=[-1,+1]) scale([j, 1]) translate([Vshort.y/2-Vlong.x/2, 0])
-            for (i=[1,2]) translate([i*(Vlong.x+gap0), Vlong.y/2-Vfloor.y])
-                deck_box(Dlong, seed=k*100+j*10+i);
-    }
+    // main card storage
+    for (i=[0:1:7]) layout_section(i) deck_box(Dlong, seed=i);
+    // player mats
     translate(-[0, Vmats.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
         mat_frame(Vmats);
         %raise(floor0+epsilon) player_mats(Vmats.y-2*Rext);
     }
-    raise(Htray) translate([0, Vshort.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
-        deck_box(Dshort);
-        %raise(floor0+epsilon) translate([0, Rext-Dshort/2])
-            starter_decks(Dshort-2*Rext);
+    // starting decks (including heirlooms & shelters)
+    raise_tier(2) {
+        translate([0, Vshort.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
+            deck_box(Dshort);
+            %raise(floor0+epsilon) translate([0, Rext-Dshort/2])
+                starter_decks(Dshort-2*Rext);
+        }
     }
     // TODO: manuals
     // TODO: trash board
     // TODO: basic cards
-    // TODO: kingdom cards
     // TODO: randomizers
     // TODO: blank cards
     // TODO: event cards

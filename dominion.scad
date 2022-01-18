@@ -287,13 +287,14 @@ echo(Rext=Rext, Rint=Rint, Rtop=Rtop);
 Hseam = gap0;  // space between lid cap and box (display only)
 Avee = 60;  // angle for index v-notches and lattices
 Dthumb = 25;  // index hole diameter
+Dstrut = 12;  // width of struts and corner braces
 
 // vertical layout
-Hroom = ceil(Vinterior.z - Vmanual.z) - 1;
+Hroom = ceil(Vinterior.z - Vmanual.z);
 Hdeck = 65;
 Htray = 27;
 Hhalf = flayer(Htray/2);
-echo(Hroom=Hroom, Hdeck=Hdeck, Htray=Htray, Hhalf=Hhalf);
+echo(Hroom=Hroom, Hdeck+Htray, Hdeck=Hdeck, Htray=Htray, Hhalf=Hhalf);
 
 module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
              scale=1, center=false) {
@@ -309,8 +310,8 @@ module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
     else square(shape, center=true);
 }
 
-module lattice_cut(v, i, j=0, h0=0, d=4.8, a=Avee, r=Rint,
-                   half=0, tiers=1, factors=2) {
+module lattice_cut(v, i, j=0, h0=0, d=Dstrut, a=Avee, r=Rint, tiers=1,
+                   factors=2, center=false) {
     // v: lattice volume
     // i: horizontal position
     // j: vertical position
@@ -318,26 +319,27 @@ module lattice_cut(v, i, j=0, h0=0, d=4.8, a=Avee, r=Rint,
     // d: strut width
     // a: strut angle
     // r: corner radius
-    // half: -1 = left half, 0 = whole, +1 = right half
     // tiers: number of tiers in vertical split
     // factors: verticial divisibility (use 6/12/etc for complex patterns)
+    // center: start pattern at center instead of end
     hlayers = factors*round(nlayer(v.z-d)/factors);
     htri = zlayer(hlayers / tiers); // trestle height
     dtri = 2*eround(htri/tan(a));  // trestle width (triangle base)
     dycut = v.y + 2*gap0; // depth for cutting through Y axis
-    tri = [
-        [[0, -htri/2], [0, htri/2], [-dtri/2, -htri/2]],  // left
-        [[dtri/2, -htri/2], [0, htri/2], [-dtri/2, -htri/2]],  // whole
-        [[0, -htri/2], [0, htri/2], [dtri/2, -htri/2]],  // half
-    ];
+    tri = [[dtri/2, -htri/2], [0, htri/2], [-dtri/2, -htri/2]];
     xstrut = eround(d/2/sin(a));
-    flip = 1 - (2 * (i % 2));
+    flip = 1 - (2 * abs(i % 2));
     z0 = qlayer(v.z - htri*tiers) / 2;
-    x0 = eround((z0 - h0) / tan(a)) + xstrut;
-    y0 = dycut - gap0;
-    translate([x0, y0, z0] + [(i+j+1)/2*dtri, 0, (j+1/2)*htri])
-        scale([1, 1, flip]) rotate([90, 0, 0]) linear_extrude(dycut)
-        offset(r=r) offset(r=-d/2-r) polygon(tri[sign(half)+1]);
+    x0 = center ? -dtri/2 : eround((z0 - h0) / tan(a)) + xstrut;
+    y0 = (dycut - gap0)/2;
+    limit = [v.x-d, v.z];
+    translate([0, y0, 0])
+        rotate([90, 0, 0]) linear_extrude(dycut)
+        offset(r=r) offset(r=-d/2-r) intersection() {
+            translate([x0, z0] + [(i+j+1)/2*dtri, (j+1/2)*htri])
+                scale([1, flip]) polygon(tri);
+            translate(center ? [-limit.x/2, 0] : [d/2, 0]) square(limit);
+        }
 }
 module wall_vee_cut(size, a=Avee, gap=wall0/2) {
     span = size.x;
@@ -373,85 +375,81 @@ function card_tray_volume(v) = vround([
 
 Dlong = Vfloor.y / 2;
 Vlong = deck_box_volume(Dlong);
-Dtall = Vfloor.x - 4*Vlong.x;
-Vtall = deck_frame_volume(Dtall);
-Vmats = [Vfloor.y - 2*Vtall.x, Dtall, Vcard.y];
-echo(Vtall, Vmats);
-clong = card_count(Vlong.y-2*Rext, sk_standard);
-cshort = card_count(Vtall.y-2*Rext, sk_standard);
-echo(clong=clong, cshort=cshort, total=8*clong+2*cshort);
+Dshort = Vfloor.x - 4*Vlong.x;
+Vshort = deck_box_volume(Dshort);
+Vmats = [135, Dshort, Hdeck+Htray];
 module deck_box(d, seed=undef, color=undef) {
     vbox = deck_box_volume(d);
     shell = [vbox.x, vbox.y];
     well = shell - 2*[wall0, wall0];
     // notch dimensions:
-    hvee = qlayer(vbox.z/2);  // half the height of the box
-    dvee = 2*hvee/tan(Avee);  // point of the vee exactly at the base
-    dtop = 2*vbox.z/tan(Avee);  // width of the vee at the top
-    dcorner = (vbox.x - dtop) / 2;  // width of the corner wall top
-    aside = max(Avee, atan(vbox.z / (vbox.y/2 - dcorner)));
-    dside = vbox.y - 2*dcorner - 2*(vbox.z-hvee)/tan(aside);
-    vend = [dvee, vbox.y, vbox.z-hvee];
-    vside = [dside, vbox.x, vbox.z-hvee];
+    dtop = vbox.x - 2*Dstrut;  // corner supports
+    hvee = qlayer(vbox.z - dtop/2 * sin(Avee));
+    vend = [dtop/2, vbox.y, vbox.z-hvee];
+    ystrut = Dstrut + Htray/tan(Avee);
+    hside = Dstrut;
+    // hside = qlayer(vbox.z - (vbox.y/2 - ystrut) * sin(Avee));  // hexagon
+    dside = vbox.y - 2*ystrut - 2*(vbox.z-hside)/tan(Avee);
+    vside = [dside, vbox.x, vbox.z-hside];
     color(color) difference() {
         // outer shell
         prism(vbox.z, shell, r=Rext);
         // card well
         raise() prism(vbox.z, well, r=Rint);
         // base round
-        raise(-gap0) prism(vbox.z, shell - [Dthumb, Dthumb], r=Dthumb/2);
-        // wall cuts
-        raise(hvee) {
-            wall_vee_cut(vend);  // end cuts
-            if (2*dcorner+Rtop <= vbox.y)  // side cuts, if they fit
-                rotate(90) wall_vee_cut(vside, a=aside);
+        raise(-gap0) prism(vbox.z, shell - 2*[Dstrut, Dstrut], r=Dthumb/2);
+        // side cuts
+        raise(hvee) wall_vee_cut(vend);  // end vee
+        if (vbox.x < vbox.y) {
+            // side vee
+            raise(hside) rotate(90) wall_vee_cut(vside);
+        } else {
+            // lattice
+            vlattice = [vbox.y, vbox.x, vbox.z];
+            rotate(90) for (i=[-2:1:+2]) lattice_cut(vlattice, i, center=true);
         }
     }
     %if (!is_undef(seed))
         translate([0, Rext-d/2, floor0+epsilon])
             random_piles(d-2*Rext, seed=seed);
 }
-module area_frame(size, bottom=false, color=undef) {
+module mat_frame(size, color=undef) {
     shell = [size.x, size.y];
     well = shell - 2*[wall0, wall0];
     // notch dimensions:
-    dcorner = (Vlong.x - 2*Vlong.z/tan(Avee)) / 2;  // match deck box
-    hvee = qlayer(Vlong.z/2);  // match deck box
-    axvee = max(atan(size.z / (size.x/2 - dcorner)), Avee);
-    ayvee = max(atan(size.z / (size.y/2 - dcorner)), Avee);
-    dxvee = size.x - 2*dcorner - 2*(size.z-hvee) / tan(axvee);
-    dyvee = size.y - 2*dcorner - 2*(size.z-hvee) / tan(ayvee);
+    hvee = qlayer(Dstrut);
+    axvee = max(atan(2 * (size.z-Dstrut) / (size.x-3*Dstrut)), Avee);
+    ayvee = max(atan(2 * (size.z-Dstrut) / (size.y-3*Dstrut)), Avee);
+    dxvee = size.x - 2*Dstrut - 2*(size.z-hvee) / tan(axvee);
+    dyvee = size.y - 2*Dstrut - 2*(size.z-hvee) / tan(ayvee);
     vxside = [dxvee, size.y, size.z-hvee];
     vyside = [dyvee, size.x, size.z-hvee];
     color(color) difference() {
         // outer shell
         prism(size.z, shell, r=Rext);
-        // card well (full depth if bottom == false)
-        raise(bottom ? floor0 : -gap0) prism(size.z+2*gap0, well, r=Rint);
+        // card well
+        raise(floor0) prism(size.z+2*gap0, well, r=Rint);
         // base round
-        echo(size, [shell.x/2-Dthumb, shell.y-Dthumb]);
-        raise(-gap0) for(i=[-1,+1]) translate([i*(shell.x/4-Dthumb/9), 0])
-            prism(size.z, [shell.x/2-Dthumb, shell.y-Dthumb], r=Dthumb/2);
-        // wall cuts
+        vhole = [(shell.x-3*Dstrut)/2, shell.y-2*Dstrut];
+        raise(-gap0) for(i=[-1,+1])
+            translate([i*(shell.x-vhole.x-2*Dstrut)/2, 0])
+            prism(size.z, vhole, r=Dthumb/2);
+        // vee cuts
         raise(hvee) {
             wall_vee_cut(vxside, a=axvee);  // end cuts
             rotate(90) wall_vee_cut(vyside, a=ayvee);  // side cuts
         }
+        // lattice cuts
+        x0 = dxvee/2 - hvee/tan(axvee);
+        for (i=[-1,+1]) scale([i, 1]) translate([x0, 0])
+            lattice_cut([size.x/2-x0, size.y, size.z], 0, a=axvee);
     }
-}
-module deck_frame(d, seed=undef, color=undef) {
-    vframe = deck_frame_volume(d);
-    area_frame(vframe, color=color);
-    %if (!is_undef(seed))
-        translate([0, Rext-d/2, floor0+epsilon])
-            random_piles(d-2*Rext, seed=seed);
 }
 module player_mats(d, n=Nplayers, lean=true) {
     vmat = [for (mat=Lmats) [max(mat.x, mat.y), min(mat.x, mat.y), mat.z]];
     dstack = sum([for (mat=vmat) mat.z]);
     ylean = d - n*dstack + Rint;
     hpile = max([for (mat=vmat) mat.y]);
-    echo(hpile, ylean);
     lean(hpile, ylean, lean ? 0 : 90)
     for (i=[0:1:n-1]) color(player_colors[5-i], 0.5) {
         translate([0, n*dstack-d/2]) rotate([90, 0, 0])
@@ -555,7 +553,7 @@ module lean(h, d, amin=0) {
     ];
     multmatrix(m=mlean) children();
 }
-module starter_decks(d, n=Nplayers, wide=false, lean=false) {
+module starter_decks(d, n=Nplayers, wide=true, lean=true) {
     dy = supply_pile_size(20, index=true);
     ylean = d - n*dy + Rint;
     hpile = (wide ? Vcard.x : Vcard.y) + index_card;
@@ -571,14 +569,6 @@ module starter_decks(d, n=Nplayers, wide=false, lean=false) {
         }
     }
 }
-module randomizers(d, cards=6*26, wide=false, lean=false) {
-    dy = supply_pile_size(cards, index=true);
-    ylean = d - dy + Rint;
-    hpile = (wide ? Vcard.x : Vcard.y) + index_card;
-    lean(hpile, ylean, lean ? 0 : 90)
-        supply_pile(cards, up=true, wide=wide, color="#80c0ff");
-}
-
 module card_well(deck, tray=undef, a=Avee, gap=gap0) {
     // TODO: improve conversions between deck, well, and shell sizes
     vtray = tray ? tray : card_tray_volume(deck);
@@ -632,26 +622,23 @@ module card_tray(deck, tray=undef, color=undef) {
 module organizer() {
     // box shape and manuals
     // everything needs to fit inside this!
-    randomizers = ["blue"];
     starters = [
         card_colors[1], card_colors[3], card_colors[1], card_colors[10],
     ];
     %color("#101080", 0.25) box(Vinterior, frame=true);
     for (k=[-1,+1]) scale([1, k]) translate([0, Vfloor.y/2-gap0/2]) {
-        translate([0, gap0-Vtall.x/2]) rotate(-90) {
-            deck_frame(Dtall);
-            translate([0, Rext-Dtall/2]) {
-                if (0<k) starter_decks(Dtall-2*Rext, lean=true);
-                else randomizers(Dtall-2*Rext, lean=true);
-            }
-        }
-        for (j=[-1,+1]) scale([j, 1]) translate([Vtall.y/2-Vlong.x/2, 0])
+        for (j=[-1,+1]) scale([j, 1]) translate([Vshort.y/2-Vlong.x/2, 0])
             for (i=[1,2]) translate([i*(Vlong.x+gap0), Vlong.y/2-Vfloor.y])
                 deck_box(Dlong, seed=k*100+j*10+i);
     }
-    rotate(-90) {
-        area_frame(Vmats, bottom=true);
+    translate(-[0, Vmats.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
+        mat_frame(Vmats);
         %raise(floor0+epsilon) player_mats(Vmats.y-2*Rext);
+    }
+    raise(Htray) translate([0, Vshort.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
+        deck_box(Dshort);
+        %raise(floor0+epsilon) translate([0, Rext-Dshort/2])
+            starter_decks(Dshort-2*Rext);
     }
     // TODO: manuals
     // TODO: trash board
@@ -663,19 +650,12 @@ module organizer() {
     // TODO: coin tokens
     // TODO: vp tokens
     // TODO: embargo tokens
-    // TODO: Seaside mats
-    // TODO: Prosperity mats
     // TODO: Dark Ages special cards
     // TODO: Nocturne special cards
 }
 
-// tests for card trays
-module test_trays() {
-}
-
 *deck_box(Dlong);
-*deck_frame(Dtall);
-*area_frame(Vmats, bottom=true);
+*deck_box(Dshort);
+*mat_frame(Vmats);
 
-*test_trays();
 organizer();

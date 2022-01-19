@@ -604,19 +604,17 @@ module card_tray(h=1, color=undef) {
     %raise() rotate(90) children();  // card stack
 }
 module scoop_well(h, v, r0, r1) {
-    hull() {
-        raise(h-r1) prism(r1, v, r=r0);
-        raise(r1) minkowski($fa=5) {
-            prism(epsilon, v-2*[r1, r1], r=r0);
-            intersection() {
-                rotate([90, 0, 0]) cylinder(h=2*r1, r=r1, center=true);
-                rotate([90, 0, 90]) cylinder(h=2*r1, r=r1, center=true);
-            }
+    hull($fa=10) {
+        for (a=[0:$fa:90]) {
+            zt = r1*(1+sin(a-90));
+            xt = r1*(1-cos(a-90));
+            t = cos(a-90);
+            rt = r1 + t * (r0 - r1);
+            raise(zt) prism(h-zt, v-2*[xt,xt], r=rt);
         }
-        prism(epsilon, v-3*[r1, r1], r=r0);  // ensure level floor
     }
 }
-module token_tray(size=undef, wells=[1, 2], color=undef) {
+module token_tray(size=undef, wells=[1, 2], scoop=true, color=undef) {
     vtray = is_list(size) ? size : size ? tray_volume(size) : tray_volume();
     shell = [vtray.x, vtray.y];
     origin = [wall0-shell.x/2, wall0-shell.y/2];
@@ -631,7 +629,8 @@ module token_tray(size=undef, wells=[1, 2], color=undef) {
                 well = [dx, dy];
                 echo(well=well, inches=well/inch);
                 translate(origin + well/2 + [i*(dx+wall0), j*(dy+wall0)])
-                    prism(vtray.z, well, r=Rint);
+                    if (scoop) scoop_well(vtray.z, well, r0=Rint, r1=Dstrut/2);
+                    else prism(vtray.z, well, r=Rint);
             }
         }
     }
@@ -639,11 +638,11 @@ module token_tray(size=undef, wells=[1, 2], color=undef) {
 }
 Vlowtray = [Dshort, Vfloor.y - Vmats.x, Hhalf];
 Vmidtray = [Dshort, Vfloor.y - Vmats.x - Vshort.x, Hdeck];
-module low_fill_tray(wells=[1, 1, 1], color=undef) {
-    token_tray(Vlowtray, wells=wells, color=color);
+module low_fill_tray(wells=[1, 1, 1], scoop=true, color=undef) {
+    token_tray(Vlowtray, wells=wells, scoop=scoop, color=color);
 }
-module mid_fill_tray(wells=[1], color=undef) {
-    token_tray(Vmidtray, wells=wells, color=color);
+module mid_fill_tray(wells=[1], scoop=true, color=undef) {
+    token_tray(Vmidtray, wells=wells, scoop=scoop, color=color);
 }
 
 function deck_height(n=0, deck=1, gap=gap0/2) =

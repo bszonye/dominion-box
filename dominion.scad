@@ -1,5 +1,7 @@
 echo("\n\n====== DOMINION ORGANIZER ======\n\n");
 
+Qdraft = 15;
+Qfinal = 5;
 $fa = 15;  // 24 segments per circle (aligns with axes)
 $fs = 0.1;
 
@@ -144,6 +146,7 @@ function vdeck(n=1, sleeve, quality, card=dominion_card, wide=false) = [
 wall0 = xwall(4);
 floor0 = qlayer(wall0);
 gap0 = 0.1;  // TODO: clean up gap/cut/joint code
+cut0 = wall0/2;  // cutting margin for negative spaces
 
 function unit_axis(n) = [for (i=[0:1:2]) i==n ? 1 : 0];
 
@@ -292,7 +295,6 @@ Hroom = ceil(Vinterior.z - Vmanual.z);
 Hdeck = 65;
 Htray = 27;
 Hhalf = flayer(Htray/2);
-echo(Hroom=Hroom, Hdeck+Htray, Hdeck=Hdeck, Htray=Htray, Hhalf=Hhalf);
 
 module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
              scale=1, center=false) {
@@ -339,7 +341,7 @@ module lattice_cut(v, i, j=0, h0=0, d=Dstrut, a=Avee, r=Rint, tiers=1,
             translate(center ? [-limit.x/2, 0] : [d/2, 0]) square(limit);
         }
 }
-module wall_vee_cut(size, a=Avee, gap=wall0/2) {
+module wall_vee_cut(size, a=Avee, cut=cut0) {
     span = size.x;
     y0 = -2*Rext;
     y1 = size.z;
@@ -351,9 +353,9 @@ module wall_vee_cut(size, a=Avee, gap=wall0/2) {
     x2 = x1 + Rext/tan(a1);
     x3 = x2 + Rext + epsilon;  // needs +epsilon for 90-degree angles
     poly = [[x3, y0], [x3, y1], [x1, y1], [x0, 0], [x0, y0]];
-    rotate([90, 0, 0]) linear_extrude(size.y+2*gap, center=true)
+    rotate([90, 0, 0]) linear_extrude(size.y+2*cut, center=true)
     difference() {
-        translate([0, y1/2+gap/2]) square([2*x2, y1+gap], center=true);
+        translate([0, y1/2+cut/2]) square([2*x2, y1+cut], center=true);
         for (s=[-1,+1]) scale([s, 1]) hull() {
             offset(r=Rext) offset(r=-Rext) polygon(poly);
             translate([x0, y0]) square([x3-x0, -y0]);
@@ -572,39 +574,43 @@ Vhalf = [Vtray2.x, Vtray2.y, Hhalf];
 
 function tray_volume(h=1) =
     [Vtray.x, Vtray.y, flayer(h*Vtray.z)];
-module card_well(gap=2*gap0) {
-    vtray = tray_volume(1);
+module card_well(h=1, scoop=Rint, cut=cut0) {
+    scoop_cut = scoop ? scoop+cut : cut;
+    vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = shell - 2*[wall0, wall0];
-    raise(floor0) linear_extrude(vtray.z-floor0+gap)
-        rounded_square(Rint, well);
-    raise(-gap) linear_extrude(floor0+2*gap) {
+    raise(floor0) {
+        if (scoop) scoop_well(vtray.z-floor0+cut, well, r0=Rint, r1=scoop);
+        else prism(vtray.z-floor0+cut, well, r=Rint);
+        translate([0, wall0-vtray.y]/2)
+            wall_vee_cut([Dthumb, wall0, vtray.z-floor0], cut=scoop_cut);
+    }
+    raise(-cut) linear_extrude(floor0+2*scoop_cut) {
         // thumb round
         xthumb = 2/3 * Dthumb;  // depth of thumb round
-        translate([0, -gap-vtray.y/2])
-            semistadium(xthumb-Dthumb/2+gap, d=Dthumb);
+        translate([0, -cut-vtray.y/2])
+            semistadium(xthumb-Dthumb/2+cut, d=Dthumb);
         // bottom index hole
         translate([0, xthumb/3])
         stadium(xthumb, d=Dthumb, a=90);
     }
-    raise(floor0) translate([0, wall0-vtray.y]/2)
-        wall_vee_cut([Dthumb, wall0, vtray.z-floor0], gap=gap);
 }
 
-module card_tray(h=1, color=undef) {
+module card_tray(h=1, scoop=Rint, color=undef) {
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = tray_volume(h=h) - [2*wall0, 2*wall0];
     origin = [well.x/2 + wall0 - shell.x/2, 0];
     dx = well.x + wall0;
+    echo(shell=shell, well=well);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
-        card_well();
+        card_well(h=h, scoop=scoop);
     }
     %raise() rotate(90) children();  // card stack
 }
 module scoop_well(h, v, r0, r1) {
-    hull($fa=10) {
+    hull() {
         for (a=[0:$fa:90]) {
             zt = r1*(1+sin(a-90));
             xt = r1*(1-cos(a-90));
@@ -614,7 +620,7 @@ module scoop_well(h, v, r0, r1) {
         }
     }
 }
-module token_tray(size=undef, wells=[1, 2], scoop=true, color=undef) {
+module token_tray(size=undef, wells=[1, 2], scoop=Dstrut/2, color=undef) {
     vtray = is_list(size) ? size : size ? tray_volume(size) : tray_volume();
     shell = [vtray.x, vtray.y];
     origin = [wall0-shell.x/2, wall0-shell.y/2];
@@ -629,7 +635,7 @@ module token_tray(size=undef, wells=[1, 2], scoop=true, color=undef) {
                 well = [dx, dy];
                 echo(well=well, inches=well/inch);
                 translate(origin + well/2 + [i*(dx+wall0), j*(dy+wall0)])
-                    if (scoop) scoop_well(vtray.z, well, r0=Rint, r1=Dstrut/2);
+                    if (scoop) scoop_well(vtray.z, well, r0=Rint, r1=scoop);
                     else prism(vtray.z, well, r=Rint);
             }
         }
@@ -638,10 +644,10 @@ module token_tray(size=undef, wells=[1, 2], scoop=true, color=undef) {
 }
 Vlowtray = [Dshort, Vfloor.y - Vmats.x, Hhalf];
 Vmidtray = [Dshort, Vfloor.y - Vmats.x - Vshort.x, Hdeck];
-module low_fill_tray(wells=[1, 1, 1], scoop=true, color=undef) {
+module low_fill_tray(wells=[1, 1, 1], scoop=Dstrut/2, color=undef) {
     token_tray(Vlowtray, wells=wells, scoop=scoop, color=color);
 }
-module mid_fill_tray(wells=[1], scoop=true, color=undef) {
+module mid_fill_tray(wells=[1], scoop=Rint, color=undef) {
     token_tray(Vmidtray, wells=wells, scoop=scoop, color=color);
 }
 
@@ -739,14 +745,14 @@ module organizer() {
         mid_fill_tray();
 }
 
-*deck_box(Dlong);
-*deck_box(Dshort);
-*mat_frame(Vmats);
-*card_tray();
-*card_tray(1/2);
-*token_tray();
-*token_tray(1/2);
-*mid_fill_tray();
-*low_fill_tray();
+*deck_box(Dlong, $fa=Qfinal);
+*deck_box(Dshort, $fa=Qfinal);
+*mat_frame(Vmats, $fa=Qfinal);
+*card_tray($fa=Qfinal);
+*card_tray(1/2, $fa=Qfinal);
+*token_tray($fa=Qfinal);
+*token_tray(1/2, $fa=Qfinal);
+*mid_fill_tray($fa=Qfinal);
+*low_fill_tray($fa=Qfinal);
 
 organizer();

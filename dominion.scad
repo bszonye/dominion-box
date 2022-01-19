@@ -745,14 +745,16 @@ module organizer() {
         mid_fill_tray();
 }
 
-*deck_box(Dlong, $fa=Qfinal);
-*deck_box(Dshort, $fa=Qfinal);
-*mat_frame(Vmats, $fa=Qfinal);
-*card_tray($fa=Qfinal);
-*card_tray(1/2, $fa=Qfinal);
-*token_tray($fa=Qfinal);
-*token_tray(1/2, $fa=Qfinal);
-*mid_fill_tray($fa=Qfinal);
-*low_fill_tray($fa=Qfinal);
+print_quality = Qdraft;
+// quality = Qfinal;
+*deck_box(Dlong, $fa=print_quality);
+*deck_box(Dshort, $fa=print_quality);
+*mat_frame(Vmats, $fa=print_quality);
+*card_tray($fa=print_quality);
+*card_tray(1/2, $fa=print_quality);
+*token_tray($fa=print_quality);
+*token_tray(1/2, $fa=print_quality);
+*mid_fill_tray($fa=print_quality);
+*low_fill_tray($fa=print_quality);
 
 organizer();

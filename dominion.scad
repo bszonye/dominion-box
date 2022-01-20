@@ -239,7 +239,7 @@ module box(size, wall=1, frame=false, a=0) {
                     translate(2*i*unit_axis(n)*wall) cube(vcut, center=true);
             }
         }
-        raise(Hwrap + wall-vext.z/2)
+        *raise(Hwrap + wall-vext.z/2)
             linear_extrude(1) difference() {
             square([vint.x+wall, vint.y+wall], center=true);
             square([vint.x, vint.y], center=true);
@@ -292,9 +292,13 @@ Dthumb = 25;  // index hole diameter
 Dstrut = 12;  // width of struts and corner braces
 
 // vertical layout
+Rfoot = 1.2;  // should be slightly smaller than Rint
+Dfoot = 10;  // inside of foot roughly aligns with Dstrut
+Hfoot = 1.0;
 Hroom = ceil(Vinterior.z - Vmanual.z);
-Hdeck = 65;
-Htray = 27;
+Hdeck = ceil(Vcard.x + floor0 + Hfoot + 0.5);  // 66;
+echo(Vcard.x + floor0 + Hfoot, Hdeck);
+Htray = 26;
 Hhalf = flayer(Htray/2);
 
 module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
@@ -374,9 +378,7 @@ module wall_vee_cut(size, a=Avee, cut=cut0) {
     }
 }
 
-function deck_box_volume(d) = vround([  // d = box length
-    Vcard.y + 2*Rext, d,
-    round(Vcard.x + floor0 + 1)]);
+function deck_box_volume(d) = [Vcard.y + 2*Rext, d, Hdeck];
 
 Dlong = Vfloor.y / 2;
 Vlong = deck_box_volume(Dlong);
@@ -493,7 +495,7 @@ Ccopper = "#c08000";
 player_colors = [
     "#ffffff",
     "#ff0000",
-    "#ff8000",
+    "#ff9000",
     "#ffff00",
     "#00ff00",
     "#a0a0ff",
@@ -591,21 +593,39 @@ module starter_decks(d, n=Nplayers, wide=true, lean=true) {
 Vtray2 = [Dlong/2, Vcard.y + 2*Rext];
 Vtray = [Vtray2.x, Vtray2.y, Htray];
 Vhalf = [Vtray2.x, Vtray2.y, Hhalf];
+Vlongtray = [Dshort, Vfloor.y - Vmats.x, Hhalf];
 
 function tray_volume(h=1) =
     [Vtray.x, Vtray.y, flayer(h*Vtray.z)];
-module card_well(h=1, scoop=Rint, cut=cut0) {
+module tray_feet_cut(tray=Vtray, cut=cut0) {
+    d = Rext - Rfoot + Dfoot/2;  // distance from edge
+    for (i=[-1,+1]) for (j=[-1,+1])
+        translate([i * (tray.x/2-d), j * (tray.y/2-d)])
+            tray_foot(cut=cut);
+}
+module tray_foot(cut=0) {
+    hleg = floor0 - Hfoot;
+    dleg = Dfoot - 2*Rfoot;
+    if (cut) {
+        raise(-cut) prism(hleg + cut + layer_height, dleg);
+        %raise(-Hfoot) tray_foot();
+    } else {
+        prism(Hfoot, Dfoot, r=Rfoot);
+        prism(Hfoot + hleg, dleg);
+    }
+}
+module card_well(h=1, hfloor=floor0, scoop=Rint, cut=cut0) {
     scoop_cut = scoop ? scoop+cut : cut;
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = shell - 2*[wall0, wall0];
-    raise(floor0) {
-        if (scoop) scoop_well(vtray.z-floor0+cut, well, r0=Rint, r1=scoop);
-        else prism(vtray.z-floor0+cut, well, r=Rint);
+    raise(hfloor) {
+        if (scoop) scoop_well(vtray.z-hfloor+cut, well, r0=Rint, r1=scoop);
+        else prism(vtray.z-hfloor+cut, well, r=Rint);
         translate([0, wall0-vtray.y]/2)
-            wall_vee_cut([Dthumb, wall0, vtray.z-floor0], cut=scoop_cut);
+            wall_vee_cut([Dthumb, wall0, vtray.z-hfloor], cut=scoop_cut);
     }
-    raise(-cut) linear_extrude(floor0+2*scoop_cut) {
+    raise(-cut) linear_extrude(hfloor+2*scoop_cut) {
         // thumb round
         xthumb = 2/3 * Dthumb;  // depth of thumb round
         translate([0, -cut-vtray.y/2])
@@ -617,18 +637,22 @@ module card_well(h=1, scoop=Rint, cut=cut0) {
 }
 
 module card_tray(h=1, cards=0, scoop=Rint, color=undef) {
+    // TODO: slope walls toward actual card width?
+    hfloor = max(floor0, 2.0*h);
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = tray_volume(h=h) - [2*wall0, 2*wall0];
     origin = [well.x/2 + wall0 - shell.x/2, 0];
     dx = well.x + wall0;
-    echo(shell=shell, well=well);
+    echo(cards=card_count(vtray.z-hfloor, quality=sk_standard));
+    echo(shell=shell, well=well, margin=well-Vcard);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
-        card_well(h=h, scoop=scoop);
+        card_well(h=h, hfloor=hfloor, scoop=scoop);
+        tray_feet_cut();
     }
 
-    %raise() rotate(90)  // card stack
+    %raise(hfloor+epsilon) rotate(90)  // card stack
         if (cards) supply_pile(cards, color=color) children();
         else children();
 }
@@ -652,6 +676,7 @@ module token_tray(size=undef, wells=[1, 2], scoop=Dstrut/2, color=undef) {
     origin = [wall0-shell.x/2, wall0-shell.y/2];
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
+        tray_feet_cut(tray=vtray);
         ny = len(wells);
         echo(shell=shell);
         raise(floor0) for (j=[0:1:ny-1]) {
@@ -669,13 +694,8 @@ module token_tray(size=undef, wells=[1, 2], scoop=Dstrut/2, color=undef) {
     }
     %raise() rotate(90) children();  // card stack
 }
-Vlowtray = [Dshort, Vfloor.y - Vmats.x, Hhalf];
-Vmidtray = [Dshort, Vfloor.y - Vmats.x - Vshort.x, Hdeck];
-module low_fill_tray(wells=[1, 2, 1], scoop=Dstrut/2, color=undef) {
-    token_tray(Vlowtray, wells=wells, scoop=scoop, color=color);
-}
-module mid_fill_tray(wells=[1], scoop=Rint, color=undef) {
-    token_tray(Vmidtray, wells=wells, scoop=scoop, color=color);
+module token_long_tray(wells=[1, 2, 1], scoop=Dstrut/2, color=undef) {
+    token_tray(Vlongtray, wells=wells, scoop=scoop, color=color);
 }
 
 function deck_height(n=0, deck=1, gap=gap0/2) =
@@ -751,27 +771,25 @@ module organizer(tier=undef) {
         layout_tray(14) token_tray(1/2, color=player_colors[4]);
     }
     // these should accommodate all of the Adventures tokens
-    translate([0, Vfloor.y/2-Vmats.x-Vlowtray.y/2-gap0]) {
-        low_fill_tray();
-        raise_deck(1/2, 0) low_fill_tray();
+    translate([0, Vfloor.y/2-Vmats.x-Vlongtray.y/2-gap0]) {
+        token_long_tray();
+        raise_deck(1/2, 0) token_long_tray();
     }
-    // dunno what this one is good for yet
-    *if (!tier || 1 < tier) raise_deck(1, 0)
-        translate([0, Vfloor.y/2-Vmats.x-Vmidtray.y/2])
-        mid_fill_tray();
 }
 
-// print_quality = Qdraft;
-quality = Qfinal;
+// scale adjustments:
+// to counteract shrinkage, scale X & Y by 100.5% in slicer
+
+print_quality = Qfinal;  // or Qdraft
 *deck_box(Dlong, seed=0, $fa=print_quality);
 *starter_box(Dshort, $fa=print_quality);
 *mat_frame(Vmats, $fa=print_quality);
-*card_tray(cards=50, $fa=print_quality);
+card_tray(cards=50, $fa=print_quality);
 *card_tray(1/2, cards=10, $fa=print_quality);
 *token_tray($fa=print_quality);
 *token_tray(1/2, $fa=print_quality);
-*mid_fill_tray($fa=print_quality);
-*low_fill_tray($fa=print_quality);
+*token_long_tray($fa=print_quality);
+*tray_foot($fa=print_quality);
 
 *organizer(tier=1);
-organizer();
+*organizer();

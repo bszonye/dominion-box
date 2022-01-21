@@ -143,9 +143,9 @@ function vdeck(n=1, sleeve, quality, card=dominion_card, wide=false) = [
 // 9.2-9.6mm unsleeved = 307-320 microns/card
 
 // basic metrics
-wall0 = eround(xwall(4));
+wall0 = 2;  // eround(xwall(4));
 floor0 = eround(qlayer(wall0));
-cut0 = eround(wall0/2);  // cutting margin for negative spaces
+cut0 = eround(2/3*wall0);  // cutting margin for negative spaces
 gap0 = 0.1;  // TODO: clean up gap/cut/joint code
 echo(wall0=wall0, floor0=floor0, gap0=gap0, cut0=cut0);
 
@@ -251,9 +251,11 @@ module box(size, wall=1, frame=false, a=0) {
 Nplayers = 6;  // many components come in sixes
 Vcard = euro_sleeve;
 Hcard = dominion_card + sk_standard;
-Vmanual1 = [210, 297];  // approximate (Dominion, Intrigue, Seaside)
-Vmanual2 = [235, 286];  // approximate (Prosperity)
-Vmanual = [max(Vmanual1.x, Vmanual2.x), max(Vmanual1.y, Vmanual2.y), 3];
+Vmanual1 = [210, 297];  // approximate (Dominion, Intrigue)
+Vmanual2 = [233, 283];  // approximate (Seaside)
+Vmanual3 = [235, 286];  // approximate (Prosperity)
+Vmanual = [max(Vmanual1.x, Vmanual2.x, Vmanual3.x),
+           max(Vmanual1.y, Vmanual2.y, Vmanual3.x), 2];
 // mats
 // TODO: verify dimensions found online
 Vmtrash = [200, 110, 1.5];
@@ -288,12 +290,16 @@ Dfoot = Dstrut - Rext + Rfoot - gap0;  // roughly align foot with Dstrut
 Hfoot = 1.0;
 echo(Rfoot=Rfoot, Dfoot=Dfoot, Hfoot=Hfoot);
 
-Hroom = ceil(Vinterior.z - Vmanual.z);
-Hdeck = ceil(Vcard.x + floor0 + Hfoot + 0.5);  // 66;
-Htray = 13;
-echo(Hroom=Hroom, Hdeck=Hdeck, Htray=Htray, total=Hdeck+2*Htray);
 // TODO: adjust tier system, maybe to multiples of Htray?
-echo(tray7th=Hroom/7, clear=Hdeck - Hfoot - index_card - Vcard.x - floor0);
+Hdstuff = Hfoot + floor0 + Vcard.x + index_card;
+Htray = 13;
+Hdeck = Hdstuff + 0.25;
+Hstack = Hdeck + 2*Htray;
+Hroom = Vinterior.z - Hstack;
+Hdroom = Hdeck - Hdstuff;
+echo(Hroom=Hroom, Hdroom=Hdroom, Hdeck=Hdeck, Htray=Htray, Hstack=Hstack);
+assert(gap0 < Hdroom);
+assert(Vmtrash.z < Hroom);
 
 function deck_box_volume(d) = [Vcard.y + 2*Rext, d, Hdeck];
 Dlong = Vfloor.y / 2;
@@ -614,20 +620,32 @@ module tray_foot(cut=0) {
         prism(Hfoot + hleg, dleg);
     }
 }
-// TODO: adjust card tray slope/scoop
-*card_tray(cards=10, $fa=Qdraft);
-module card_well(h=1, hfloor=floor0, scoop=Rint, cut=cut0) {
-    scoop_cut = scoop ? scoop+cut : cut;
+module card_well(h=1, hfloor=floor0, cut=cut0) {
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = shell - 2*[wall0, wall0];
     raise(hfloor) {
-        if (scoop) scoop_well(vtray.z-hfloor+cut, well, r0=Rint, r1=scoop);
-        else prism(vtray.z-hfloor+cut, well, r=Rint);
+        // tapered well
+        hwell = vtray.z - hfloor;
+        h1 = hwell - Hfoot;
+        v0 = Vcard;
+        v1 = well - 2*[Rint, Rint];
+        echo(v0=v0, v1=v1);
+        hull() {
+            raise(hwell) prism(cut, well, r=Rint);
+            minkowski() {
+                sphere(Rint);
+                hull() {
+                    raise(hwell-Rint) prism(Rint, v1);
+                    raise(Rint) prism(h1-2*Rint, v0);
+                }
+            }
+        }
+        // thumb vee
         translate([0, wall0-vtray.y]/2)
-            wall_vee_cut([Dthumb, wall0, vtray.z-hfloor], cut=scoop_cut);
+            wall_vee_cut([Dthumb, wall0, vtray.z-hfloor], cut=cut);
     }
-    raise(-cut) linear_extrude(hfloor+2*scoop_cut) {
+    raise(-cut) linear_extrude(vtray.z+2*cut-epsilon) {
         // thumb round
         xthumb = 2/3 * Dthumb;  // depth of thumb round
         translate([0, -cut-vtray.y/2])
@@ -639,7 +657,7 @@ module card_well(h=1, hfloor=floor0, scoop=Rint, cut=cut0) {
 }
 module card_tray(h=1, cards=0, scoop=Rint, color=undef) {
     // TODO: slope walls toward actual card width?
-    hfloor = max(floor0, 2.0*h);
+    hfloor = max(floor0, 2.0*h/2);
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = tray_volume(h=h) - [2*wall0, 2*wall0];
@@ -649,7 +667,7 @@ module card_tray(h=1, cards=0, scoop=Rint, color=undef) {
         well=well, margin=well-Vcard);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
-        card_well(h=h, hfloor=hfloor, scoop=scoop);
+        card_well(h=h, hfloor=hfloor);
         tray_feet_cut();
     }
 

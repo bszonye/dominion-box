@@ -251,7 +251,6 @@ module box(size, wall=1, frame=false, a=0) {
 Nplayers = 6;  // many components come in sixes
 Vcard = euro_sleeve;
 Hcard = dominion_card + sk_standard;
-Hboard = 2.25;  // tile & token thickness -- TODO
 Vmanual1 = [210, 297];  // approximate (Dominion, Intrigue, Seaside)
 Vmanual2 = [235, 286];  // approximate (Prosperity)
 Vmanual = [max(Vmanual1.x, Vmanual2.x), max(Vmanual1.y, Vmanual2.y), 3];
@@ -275,31 +274,27 @@ Vadvsquare = [44, 34, 2];  // square token dimensions
 Nadvsquare = 2 * Nplayers;
 
 // container metrics
-Hlid = floor0;  // height of cap lid
-Hplug = floor0;  // depth of lid below cap
-Hcap = Hlid+Hplug;  // total height of lid + plug
-
-Rsnug = 0*gap0;  // snug joint radius for friction fit
-Rlid = 1*gap0;  // lid joint radius (dx from lid/plug to container wall)
 Rext = 3;  // external corner radius
 Rint = Rext-wall0;  // internal corner radius (dx from contents to wall)
 Rtop = flayer(Rext);  // vertical corner radius
 echo(Rext=Rext, Rint=Rint, Rtop=Rtop);
 
-Hseam = gap0;  // space between lid cap and box (display only)
 Avee = 60;  // angle for index v-notches and lattices
 Dthumb = 25;  // index hole diameter
 Dstrut = 12;  // width of struts and corner braces
+echo(Avee=Avee, Dthumb=Dthumb, Dstrut=Dstrut);
 
-// vertical layout
-Rfoot = 1.2;  // should be slightly smaller than Rint
-Dfoot = 10;  // inside of foot roughly aligns with Dstrut
+Rfoot = Rext - 2 - gap0;  // concentric with Rext; leave room for 2mm wall
+Dfoot = Dstrut - Rext + Rfoot - gap0;  // roughly align foot with Dstrut
 Hfoot = 1.0;
+echo(Rfoot=Rfoot, Dfoot=Dfoot, Hfoot=Hfoot);
+
 Hroom = ceil(Vinterior.z - Vmanual.z);
 Hdeck = ceil(Vcard.x + floor0 + Hfoot + 0.5);  // 66;
-echo(Vcard.x + floor0 + Hfoot, Hdeck);
-Htray = 26;
-Hhalf = flayer(Htray/2);
+Htray = 13;
+echo(Hroom=Hroom, Hdeck=Hdeck, Htray=Htray, total=Hdeck+2*Htray);
+// TODO: adjust tier system, maybe to multiples of Htray?
+echo(tray7th=Hroom/7, clear=Hdeck - Hfoot - index_card - Vcard.x - floor0);
 
 module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
              scale=1, center=false) {
@@ -315,7 +310,7 @@ module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
     else square(shape, center=true);
 }
 
-module lattice_cut(v, i, j=0, h0=0, d=Dstrut, a=Avee, r=Rint, tiers=1,
+module lattice_cut(v, i, j=0, h0=0, d=undef, a=Avee, r=Rint, tiers=1,
                    flip=false, factors=2, open=false, center=false, cut=cut0) {
     // v: lattice volume
     // i: horizontal position
@@ -327,33 +322,38 @@ module lattice_cut(v, i, j=0, h0=0, d=Dstrut, a=Avee, r=Rint, tiers=1,
     // tiers: number of tiers in vertical split
     // factors: verticial divisibility (use 6/12/etc for complex patterns)
     // center: start pattern at center instead of end
-    hlayers = factors*round(nlayer(v.z-d)/factors);
+    dstrut = is_undef(d) ? Dstrut / tiers : d;
+    hlayers = factors*round(nlayer(v.z-dstrut)/factors);
     htri = zlayer(hlayers / tiers); // trestle height
     dtri = 2*eround(htri/tan(a));  // trestle width (triangle base)
     dycut = v.y + 2*cut; // depth for cutting through Y axis
     dzcut = v.z + 2*cut; // height for cutting through Z axis
     tri = [[dtri/2, -htri/2], [0, htri/2], [-dtri/2, -htri/2]];
-    xstrut = eround(d/2/sin(a));
-    yflip = (1 - (2 * abs(i % 2))) * (flip ? -1 : +1);
+    xstrut = eround(dstrut/2/sin(a));
     z0 = qlayer(v.z - htri*tiers) / 2;
-    x0 = center ? -dtri/2 : eround((z0 - h0) / tan(a)) + xstrut;
+    x0 = center ? 0 : eround((z0 - h0) / tan(a)) + xstrut + dtri/2;
     y0 = dycut/2;
-    limit = [v.x-d, v.z];
-    xlimit = center ? -limit.x/2 : d/2;
+    nx = center ? i : i + j;
+    x = nx/2 * dtri;
+    y = (j+1/2) * htri;
+    yflip = (1 - (2 * abs((nx+j) % 2))) * (flip ? -1 : +1);
+    limit = [v.x-dstrut, v.z];
+    xlimit = center ? -limit.x/2 : dstrut/2;
     translate([0, y0, 0]) rotate([90, 0, 0]) linear_extrude(dycut) {
-        offset(r=r) offset(r=-d/2-r) intersection() {
-            translate([x0, z0] + [(i+j+1)/2*dtri, (j+1/2)*htri])
+        offset(r=r) offset(r=-dstrut/2-r) intersection() {
+            translate([x0, z0] + [x, y])
                 scale([1, yflip]) polygon(tri);
             translate([xlimit, 0]) square(limit);
         }
     }
-    if (open && yflip < 0) {
-        xvee = x0 + (i+j+1)/2 * dtri;
-        hvee = z0 + htri/2;
+    if (open && j+1 == tiers && yflip < 0) {
+        xvee = x0 + x;
+        hvee = z0 + y;
         dvee = dtri/2 - 2*xstrut;
-        if (xlimit <= xvee - dtri/2 && xvee + dtri/2 <= xlimit+limit.x)
+        if (xlimit <= xvee - dtri/2 && xvee + dtri/2 <= xlimit+limit.x) {
             translate([xvee, 0, hvee])
                 wall_vee_cut([dvee, v.y, v.z-hvee], a=a);
+        }
     }
 }
 module wall_vee_cut(size, a=Avee, cut=cut0) {
@@ -384,8 +384,8 @@ Dlong = Vfloor.y / 2;
 Vlong = deck_box_volume(Dlong);
 Dshort = Vfloor.x - 4*Vlong.x;
 Vshort = deck_box_volume(Dshort);
-Vmats = [135, Dshort, Hdeck+Htray];
-module deck_box(d, seed=undef, flip=false, open=false, color=undef) {
+Vmats = [135, Dshort, Hdeck+2*Htray];
+module deck_box(d, seed=undef, tiers=1, flip=false, open=false, color=undef) {
     vbox = deck_box_volume(d);
     shell = [vbox.x, vbox.y];
     well = shell - 2*[wall0, wall0];
@@ -404,8 +404,9 @@ module deck_box(d, seed=undef, flip=false, open=false, color=undef) {
         raise(hvee) wall_vee_cut(vend);  // end vee
         // lattice
         vlattice = [vbox.y, vbox.x, vbox.z];
-        rotate(90) for (i=[-2:1:+2])
-            lattice_cut(vlattice, i, flip=flip, open=open, center=true);
+        rotate(90) for (j=[0:1:1]) for (i=[-4:1:+4])
+            lattice_cut(vlattice, i, j, tiers=tiers,
+                flip=flip, open=open, center=true);
     }
     %if (!is_undef(seed))
         translate([0, wall0+gap0-d/2, floor0+epsilon])
@@ -592,13 +593,14 @@ module starter_decks(d, n=Nplayers, wide=true, lean=true) {
 
 Vtray2 = [Dlong/2, Vcard.y + 2*Rext];
 Vtray = [Vtray2.x, Vtray2.y, Htray];
-Vhalf = [Vtray2.x, Vtray2.y, Hhalf];
-Vlongtray = [Dshort, Vfloor.y - Vmats.x, Hhalf];
+Vlongtray = [Dshort, Vfloor.y - Vmats.x, Htray];
 
 function tray_volume(h=1) =
     [Vtray.x, Vtray.y, flayer(h*Vtray.z)];
 module tray_feet_cut(tray=Vtray, cut=cut0) {
-    d = Rext - Rfoot + Dfoot/2;  // distance from edge
+    // d = distance from center of foot to edge of tray
+    // (half width of foot + external radius - concentric foot radius)
+    d = Dfoot/2 + Rext - Rfoot;
     for (i=[-1,+1]) for (j=[-1,+1])
         translate([i * (tray.x/2-d), j * (tray.y/2-d)])
             tray_foot(cut=cut);
@@ -614,6 +616,8 @@ module tray_foot(cut=0) {
         prism(Hfoot + hleg, dleg);
     }
 }
+// TODO: adjust card tray slope/scoop
+*card_tray(cards=10, $fa=Qdraft);
 module card_well(h=1, hfloor=floor0, scoop=Rint, cut=cut0) {
     scoop_cut = scoop ? scoop+cut : cut;
     vtray = tray_volume(h=h);
@@ -635,7 +639,6 @@ module card_well(h=1, hfloor=floor0, scoop=Rint, cut=cut0) {
         stadium(xthumb, d=Dthumb, a=90);
     }
 }
-
 module card_tray(h=1, cards=0, scoop=Rint, color=undef) {
     // TODO: slope walls toward actual card width?
     hfloor = max(floor0, 2.0*h);
@@ -644,8 +647,8 @@ module card_tray(h=1, cards=0, scoop=Rint, color=undef) {
     well = tray_volume(h=h) - [2*wall0, 2*wall0];
     origin = [well.x/2 + wall0 - shell.x/2, 0];
     dx = well.x + wall0;
-    echo(cards=card_count(vtray.z-hfloor, quality=sk_standard));
-    echo(shell=shell, well=well, margin=well-Vcard);
+    echo(cards=card_count(vtray.z-hfloor, quality=sk_standard),
+        well=well, margin=well-Vcard);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
         card_well(h=h, hfloor=hfloor, scoop=scoop);
@@ -668,8 +671,8 @@ module scoop_well(h, v, r0, r1) {
     }
 }
 // TODO: refine scoop
-*scoop_well(Hhalf, [50, 33], r0=Rint, r1=6);
-*token_tray(1/2);
+*scoop_well(Htray, [50, 33], r0=Rint, r1=6);
+*token_tray();
 module token_tray(size=undef, wells=[1, 2], scoop=Dstrut/2, color=undef) {
     vtray = is_list(size) ? size : size ? tray_volume(size) : tray_volume();
     shell = [vtray.x, vtray.y];
@@ -731,49 +734,49 @@ module organizer(tier=undef) {
         %raise() player_mats(Vmats.y-2*Rext);
     }
     // starting decks (including heirlooms & shelters)
-    if (!tier || 1 < tier) raise_deck(1, deck=0)
+    if (!tier || 1 < tier) raise_deck(2, deck=0)
         translate([0, Dlong/2 - Vfloor.y/2]) rotate(-90)
             starter_box(Dshort);
     // base cards
     if (!tier || 1 < tier) raise_deck() {
         // supply_pile(12, color=Cvictory);  // provinces
-        layout_tray(0) card_tray(cards=30, color=Cgold);  // gold
-        layout_tray(1) card_tray(cards=40, color=Csilver);  // silver
-        layout_tray(2) card_tray(cards=32, color=Ccopper);  // copper
-        layout_tray(3) card_tray(color=Ctrash);  // trash
+        layout_tray(0) card_tray(h=2, cards=30, color=Cgold);  // gold
+        layout_tray(1) card_tray(h=2, cards=40, color=Csilver);  // silver
+        layout_tray(2) card_tray(h=2, cards=32, color=Ccopper);  // copper
+        layout_tray(3) card_tray(h=2, color=Ctrash);  // trash
         // extra cards for 5+ players
-        layout_tray(4) card_tray(h=1/2, cards=20, color=Ccopper);  // copper
-        layout_tray(5) card_tray(cards=30, color=Csilver);  // silver
-        layout_tray(6) card_tray(cards=30, color=Ccurse);  // curses
-        layout_tray(7) card_tray(color=Ctrash);  // trash
-        layout_tray(8) card_tray(h=1/2, color=Csilver)
+        layout_tray(4) card_tray(cards=20, color=Ccopper);  // copper
+        layout_tray(5) card_tray(h=2, cards=30, color=Csilver);  // silver
+        layout_tray(6) card_tray(h=2, cards=30, color=Ccurse);  // curses
+        layout_tray(7) card_tray(h=2, color=Ctrash);  // trash
+        layout_tray(8) card_tray(color=Csilver)
             supply_pile(12, color=Ctreasure);  // platinum
-        layout_tray(9) card_tray(h=1/2, color=Cvictory)
+        layout_tray(9) card_tray(color=Cvictory)
             supply_pile(18, color=Cvictory);  // colony
-        layout_tray(10) card_tray(h=1/2, color=Cvictory)
+        layout_tray(10) card_tray(color=Cvictory)
             supply_pile(18, color=Cvictory);  // spare victory cards
-        layout_tray(11) card_tray(color=Ctrash);  // trash
-        layout_tray(12) token_tray(1/2, color=player_colors[1]);
-        layout_tray(13) token_tray(1/2, color=player_colors[0]);
-        layout_tray(14) token_tray(1/2, color=player_colors[5]);
-        layout_tray(15) card_tray(color=Ctrash);  // trash
+        layout_tray(11) card_tray(h=2, color=Ctrash);  // trash
+        layout_tray(12) token_tray(color=player_colors[1]);
+        layout_tray(13) token_tray(color=player_colors[0]);
+        layout_tray(14) token_tray(color=player_colors[5]);
+        layout_tray(15) card_tray(h=2, color=Ctrash);  // trash
     }
-    if (!tier || 1 < tier) raise_deck(1/2) {
-        layout_tray(4) card_tray(h=1/2, cards=18, color=Cgold);  // gold
-        layout_tray(8) card_tray(h=1/2, color=Cvictory)
+    if (!tier || 1 < tier) raise_deck(1) {
+        layout_tray(4) card_tray(cards=18, color=Cgold);  // gold
+        layout_tray(8) card_tray(color=Cvictory)
             supply_pile(18, color=Cvictory);  // province
-        layout_tray(9) card_tray(h=1/2, color=Cvictory)
+        layout_tray(9) card_tray(color=Cvictory)
             supply_pile(12, color=Cvictory);  // duchy
-        layout_tray(10) card_tray(h=1/2, color=Cvictory)
+        layout_tray(10) card_tray(color=Cvictory)
             supply_pile(12, color=Cvictory);  // estate
-        layout_tray(12) token_tray(1/2, color=player_colors[2]);
-        layout_tray(13) token_tray(1/2, color=player_colors[3]);
-        layout_tray(14) token_tray(1/2, color=player_colors[4]);
+        layout_tray(12) token_tray(color=player_colors[2]);
+        layout_tray(13) token_tray(color=player_colors[3]);
+        layout_tray(14) token_tray(color=player_colors[4]);
     }
     // these should accommodate all of the Adventures tokens
     translate([0, Vfloor.y/2-Vmats.x-Vlongtray.y/2-gap0]) {
         token_long_tray();
-        raise_deck(1/2, 0) token_long_tray();
+        raise_deck(1, 0) token_long_tray();
     }
 }
 
@@ -781,15 +784,14 @@ module organizer(tier=undef) {
 // to counteract shrinkage, scale X & Y by 100.5% in slicer
 
 print_quality = Qfinal;  // or Qdraft
-*deck_box(Dlong, seed=0, $fa=print_quality);
+*deck_box(Dlong, seed=0, tiers=2, $fa=print_quality);
 *starter_box(Dshort, $fa=print_quality);
 *mat_frame(Vmats, $fa=print_quality);
-card_tray(cards=50, $fa=print_quality);
-*card_tray(1/2, cards=10, $fa=print_quality);
+*card_tray(h=2, cards=50, $fa=print_quality);
+*card_tray(cards=10, $fa=print_quality);
 *token_tray($fa=print_quality);
-*token_tray(1/2, $fa=print_quality);
 *token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
 
 *organizer(tier=1);
-*organizer();
+organizer();

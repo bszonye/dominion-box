@@ -252,7 +252,7 @@ Nplayers = 6;  // many components come in sixes
 Vcard = euro_sleeve;
 Hcard = dominion_card + sk_standard;
 Vmanual1 = [210, 297];  // approximate (Dominion, Intrigue)
-Vmanual2 = [233, 283];  // approximate (Seaside)
+Vmanual2 = [202, 285];  // approximate (Seaside)
 Vmanual3 = [235, 286];  // approximate (Prosperity)
 Vmanual = [max(Vmanual1.x, Vmanual2.x, Vmanual3.x),
            max(Vmanual1.y, Vmanual2.y, Vmanual3.x), 2];
@@ -655,8 +655,7 @@ module card_well(h=1, hfloor=floor0, cut=cut0) {
         stadium(xthumb, d=Dthumb, a=90);
     }
 }
-module card_tray(h=1, cards=0, scoop=Rint, color=undef) {
-    // TODO: slope walls toward actual card width?
+module card_tray(h=1, cards=0, color=undef) {
     hfloor = max(floor0, 2.0*h/2);
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];

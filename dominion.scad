@@ -674,34 +674,23 @@ module card_tray(h=1, cards=0, color=undef) {
         if (cards) supply_pile(cards, color=color) children();
         else children();
 }
-module scoop_well(h, v, r0, r1) {
+module scoop_well(h, v, r0, r1, cut=cut0) {
     d0 = (sqrt(2)-1)*r0;  // distance from corner to r0 at top
     d1 = (2*sqrt(2)-1)*r1;  // distance from corner to r1 at bottom
     dc = d1 - d0;
-    *hull() {
-        for (a=[0:$fa:90]) {
-            zt = r1*(1+sin(a-90));
-            xt = r1*(1-cos(a-90));
-            t = cos(a-90);
-            rt = r1 + t * (r0 - r1);
-            raise(zt) prism(h-zt, v-2*[xt,xt], r=rt);
-        }
-    }
+    h1 = h;  // h1 = dc and h1 = r1 are good alternatives
     hull() {
-        raise(dc) prism(h-dc, v, r=r0);
-        for (a=[0:min(5, $fa):90]) {
-            zc = dc*(1+sin(a-90));  // dc -> r1 duplicates v1 above
+        raise(h) prism(cut, v, r=r0);
+        for (a=[0:$fa:90]) {
+            zc = h1*(1+sin(a-90));
             xc = dc*(1-cos(a-90));
             ao = asin(min(0, zc-r1)/r1);
             xo = r1*(1-cos(ao));
             r = (d0+xc-xo) / (sqrt(2)-1) - xo;
-            raise(zc) prism(h-zc, v-2*[xo, xo], r=r);
+            raise(zc) prism(h+epsilon-zc, v-2*[xo, xo], r=r);
         }
     }
 }
-// TODO: refine scoop
-scoop_well(Htray, [50, 33], r0=Rint, r1=6, $fa=5);
-*token_tray($fa=5);
 module token_tray(size=undef, wells=[1, 2], scoop=Dstrut/2, color=undef) {
     vtray = is_list(size) ? size : size ? tray_volume(size) : tray_volume();
     shell = [vtray.x, vtray.y];
@@ -823,4 +812,4 @@ print_quality = Qfinal;  // or Qdraft
 *tray_foot($fa=print_quality);
 
 *organizer(tier=1);
-*organizer();
+organizer();

@@ -323,7 +323,7 @@ card_colors = [
     "#8000ff",  //  4 = curse (purple)
     "#c0a0ff",  //  5 = attack (light purple)
     "#ff8000",  //  6 = duration (orange)
-    "#806000",  //  7 = ruins (brown)
+    "#804000",  //  7 = ruins (brown)
     "#202020",  //  8 = night (black)
     "#ffc080",  //  9 = reserve (tan)
     "#c00000",  // 10 = shelter(red)
@@ -758,38 +758,53 @@ module organizer(tier=undef) {
     // base cards
     if (!tier || 1 < tier) raise_deck() {
         // supply_pile(12, color=Cvictory);  // provinces
-        layout_tray(0) card_tray(h=2, cards=30, color=Cgold);  // gold
-        layout_tray(1) card_tray(h=2, cards=40, color=Csilver);  // silver
-        layout_tray(2) card_tray(h=2, cards=32, color=Ccopper);  // copper
-        layout_tray(3) card_tray(h=2, color=Ctrash);  // trash
+        layout_tray(0)
+            card_tray(h=2, cards=30, color=Cgold);  // gold
+        layout_tray(1)
+            card_tray(h=2, cards=40, color=Csilver);  // silver
+        layout_tray(2)
+            card_tray(h=2, cards=32, color=Ccopper);  // copper
+        layout_tray(3)
+            card_tray(h=2, cards=30, color=Cruins);  // trash / ruins
         // extra cards for 5+ players
-        layout_tray(4) card_tray(cards=20, color=Ccopper);  // copper
-        layout_tray(5) card_tray(h=2, cards=30, color=Csilver);  // silver
-        layout_tray(6) card_tray(h=2, cards=30, color=Ccurse);  // curses
-        layout_tray(7) card_tray(h=2, color=Ctrash);  // trash
-        layout_tray(8) card_tray(color=Csilver)
-            supply_pile(12, color=Ctreasure);  // platinum
-        layout_tray(9) card_tray(color=Cvictory)
-            supply_pile(18, color=Cvictory);  // colony
-        layout_tray(10) card_tray(color=Cvictory)
-            supply_pile(18, color=Cvictory);  // spare victory cards
-        layout_tray(11) card_tray(h=2, color=Ctrash);  // trash
-        layout_tray(12) token_tray(color=player_colors[1]);
-        layout_tray(13) token_tray(color=player_colors[0]);
-        layout_tray(14) token_tray(color=player_colors[5]);
-        layout_tray(15) card_tray(h=2, color=Ctrash);  // trash
+        layout_tray(4)
+            card_tray(h=2, cards=18, color=Cgold);  // gold
+        layout_tray(5)
+            card_tray(h=2, cards=30, color=Csilver);  // silver
+        layout_tray(6)
+            card_tray(h=2, cards=20, color=Ccopper);  // copper
+        layout_tray(7)
+            card_tray(h=2, color="#ffa000");  // orange-yellow spare deck
+        layout_tray(8)
+            card_tray(cards=18, color=Cvictory);  // colony
+        layout_tray(9)
+            card_tray(cards=18, color=Cvictory);  // province
+        layout_tray(10)
+            card_tray(cards=18, color=Cvictory);  // spare victory cards
+        layout_tray(11)
+            card_tray(h=2, cards=30, color=Ccurse);  // curses
+        layout_tray(12)
+            token_tray(color=player_colors[1]);
+        layout_tray(13)
+            token_tray(color=player_colors[0]);
+        layout_tray(14)
+            token_tray(color=player_colors[5]);
+        layout_tray(15)
+            card_tray(h=2, color="#a020ff");  // purple-pink spare deck
     }
     if (!tier || 1 < tier) raise_deck(1) {
-        layout_tray(4) card_tray(cards=18, color=Cgold);  // gold
-        layout_tray(8) card_tray(color=Cvictory)
-            supply_pile(18, color=Cvictory);  // province
-        layout_tray(9) card_tray(color=Cvictory)
-            supply_pile(12, color=Cvictory);  // duchy
-        layout_tray(10) card_tray(color=Cvictory)
-            supply_pile(12, color=Cvictory);  // estate
-        layout_tray(12) token_tray(color=player_colors[2]);
-        layout_tray(13) token_tray(color=player_colors[3]);
-        layout_tray(14) token_tray(color=player_colors[4]);
+        layout_tray(8)
+            card_tray(cards=12, color=Csilver);  // platinum
+        layout_tray(9)
+            card_tray(cards=12, color=Cvictory);  // duchy
+        layout_tray(10)
+            card_tray(cards=12, color=Cvictory);  // estate
+        layout_tray(12)
+            token_tray(color=player_colors[2]);
+        layout_tray(13)
+            token_tray(color=player_colors[3]);
+        layout_tray(14)
+            token_tray(color=player_colors[4]);
     }
     // these should accommodate all of the Adventures tokens
     translate([0, Vfloor.y/2-Vmats.x-Vlongtray.y/2-gap0]) {

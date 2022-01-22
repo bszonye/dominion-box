@@ -697,6 +697,7 @@ module token_tray(scoop=Dstrut/2, color=undef) {
     origin = [wall0-shell.x/2, wall0-shell.y/2];
     wella = [vtray.x-2*wall0, Vlongtray.y - vtray.y - wall0];
     wellb = [(vtray.x-3*wall0)/2, vtray.y - wella.y - 3*wall0];
+    echo(wella=wella, wellb=wellb);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
         raise(floor0) for (i=[-1,+1]) {
@@ -716,6 +717,7 @@ module token_long_tray(scoop=Dstrut/2, color=undef) {
     origin = [wall0-shell.x/2, wall0-shell.y/2];
     wella = [vtray.x-2*wall0, vtray.y - Vtray.y - wall0];
     wellb = [(vtray.x-3*wall0)/2, vtray.y - 2*wella.y - 4*wall0];
+    echo(wella=wella, wellb=wellb);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
         raise(floor0) for (i=[-1,+1]) {

@@ -463,7 +463,7 @@ module deck_box(d=Dlong, seed=undef, tiers=2, flip=false, color=undef) {
             random_piles(d-2*wall0-2*gap0, seed=seed);
 }
 module starter_box(d=Dshort, color=undef) {
-    deck_box(d);
+    deck_box(d, color=color);
     %raise() translate([0, wall0-Dshort/2])
         starter_decks(Dshort-2*wall0);
 }
@@ -751,13 +751,13 @@ module organizer(tier=undef) {
     }
     // player mats
     translate(-[0, Vmats.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
-        mat_frame(Vmats);
+        mat_frame(Vmats, color="#a0a0ff");
         %raise() player_mats(Vmats.y-2*Rext);
     }
     // starting decks (including heirlooms & shelters)
     if (!tier || 1 < tier) raise_deck(2, deck=0)
         translate([0, Dlong/2 - Vfloor.y/2]) rotate(-90)
-            starter_box(Dshort);
+            starter_box(Dshort, color="#a0a0ff");
     // base cards
     if (!tier || 1 < tier) raise_deck() {
         // supply_pile(12, color=Cvictory);  // provinces
@@ -811,8 +811,8 @@ module organizer(tier=undef) {
     }
     // these should accommodate all of the Adventures tokens
     translate([0, Vfloor.y/2-Vmats.x-Vlongtray.y/2-gap0]) {
-        token_long_tray();
-        raise_deck(1, 0) token_long_tray();
+        token_long_tray(color="#a0a0ff");
+        raise_deck(1, 0) token_long_tray(color="#a0a0ff");
     }
 }
 
@@ -829,5 +829,5 @@ print_quality = Qfinal;  // or Qdraft
 *token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
 
-organizer(tier=1);
-*organizer();
+*organizer(tier=1);
+organizer();

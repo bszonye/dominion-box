@@ -221,7 +221,7 @@ module tongue(size, h=floor0, h0=undef, h1=undef, h2=undef,
 }
 
 // box metrics
-Vfloor = [475, 288];  // box floor
+Vfloor = [472, 288];  // box floor
 Vinterior = [Vfloor.x, Vfloor.y, 94];  // box interior
 Hwrap = 79;  // cover art wrap ends here, approximately
 module box(size, wall=1, frame=false, a=0) {
@@ -691,32 +691,41 @@ module scoop_well(h, v, r0, r1, cut=cut0) {
         }
     }
 }
-module token_tray(size=undef, wells=[1, 2], scoop=Dstrut/2, color=undef) {
-    vtray = is_list(size) ? size : size ? tray_volume(size) : tray_volume();
+module token_tray(scoop=Dstrut/2, color=undef) {
+    vtray = Vtray;
     shell = [vtray.x, vtray.y];
     origin = [wall0-shell.x/2, wall0-shell.y/2];
+    wella = [vtray.x-2*wall0, Vlongtray.y - vtray.y - wall0];
+    wellb = [(vtray.x-3*wall0)/2, vtray.y - wella.y - 3*wall0];
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
-        tray_feet_cut(tray=vtray);
-        ny = len(wells);
-        echo(shell=shell);
-        raise(floor0) for (j=[0:1:ny-1]) {
-            dy = (vtray.y-wall0)/ny-wall0;
-            nx = wells[j];
-            for (i=[0:1:nx-1]) {
-                dx = (vtray.x-wall0)/nx-wall0;
-                well = [dx, dy];
-                echo(well=well, inches=well/inch);
-                translate(origin + well/2 + [i*(dx+wall0), j*(dy+wall0)])
-                    if (scoop) scoop_well(vtray.z, well, r0=Rint, r1=scoop);
-                    else prism(vtray.z, well, r=Rint);
-            }
+        raise(floor0) for (i=[-1,+1]) {
+            translate([0, vtray.y/2 - wall0 - wella.y/2])
+                scoop_well(vtray.z, wella, r0=Rint, r1=scoop);
+            translate([i*(vtray.x/2 - wall0 - wellb.x/2),
+                    wellb.y/2 + wall0 - vtray.y/2])
+                scoop_well(vtray.z, wellb, r0=Rint, r1=scoop);
         }
+        tray_feet_cut();
     }
     %raise() rotate(90) children();  // card stack
 }
-module token_long_tray(wells=[1, 2, 1], scoop=Dstrut/2, color=undef) {
-    token_tray(Vlongtray, wells=wells, scoop=scoop, color=color);
+module token_long_tray(scoop=Dstrut/2, color=undef) {
+    vtray = Vlongtray;
+    shell = [vtray.x, vtray.y];
+    origin = [wall0-shell.x/2, wall0-shell.y/2];
+    wella = [vtray.x-2*wall0, vtray.y - Vtray.y - wall0];
+    wellb = [(vtray.x-3*wall0)/2, vtray.y - 2*wella.y - 4*wall0];
+    color(color) difference() {
+        prism(vtray.z, shell, r=Rext);
+        raise(floor0) for (i=[-1,+1]) {
+            translate([0, i*(vtray.y/2 - wall0 - wella.y/2)])
+                scoop_well(vtray.z, wella, r0=Rint, r1=scoop);
+            translate([i*(vtray.x/2 - wall0 - wellb.x/2), 0])
+                scoop_well(vtray.z, wellb, r0=Rint, r1=scoop);
+        }
+    }
+    %raise() rotate(90) children();  // card stack
 }
 
 function deck_height(n=0, deck=1, gap=gap0/2) =

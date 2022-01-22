@@ -745,7 +745,10 @@ module organizer(tier=undef) {
     // everything needs to fit inside this!
     %color("#101080", 0.25) box(Vinterior, frame=true);
     // main card storage
-    for (i=[0:1:7]) layout_deck(i) deck_box(Dlong, seed=i);
+    for (i=[0:1:7]) {
+        color = i < 4 ? "#a0a0a0" : "#a0a0ff";
+        layout_deck(i) deck_box(Dlong, seed=i, color=color);
+    }
     // player mats
     translate(-[0, Vmats.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
         mat_frame(Vmats);
@@ -826,5 +829,5 @@ print_quality = Qfinal;  // or Qdraft
 *token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
 
-*organizer(tier=1);
-organizer();
+organizer(tier=1);
+*organizer();

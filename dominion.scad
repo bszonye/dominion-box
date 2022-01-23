@@ -278,7 +278,9 @@ Nadvsquare = 2 * Nplayers;
 // container metrics
 Rext = 3;  // external corner radius
 Rint = Rext-wall0;  // internal corner radius (dx from contents to wall)
-echo(Rext=Rext, Rint=Rint);
+Rdiv = Rint/2;
+Hdiv = Rint;
+echo(Rext=Rext, Rint=Rint, Rdiv=Rdiv, Hdiv=Hdiv);
 
 Avee = 60;  // angle for index v-notches and lattices
 Dthumb = 25;  // index hole diameter
@@ -290,7 +292,6 @@ Dfoot = Dstrut - Rext + Rfoot - gap0;  // roughly align foot with Dstrut
 Hfoot = 1.0;
 echo(Rfoot=Rfoot, Dfoot=Dfoot, Hfoot=Hfoot);
 
-// TODO: adjust tier system, maybe to multiples of Htray?
 Hdstuff = Hfoot + floor0 + Vcard.x + index_card;
 Htray = 13;
 Hdeck = Hdstuff + 0.25;
@@ -674,6 +675,29 @@ module card_tray(h=1, cards=0, color=undef) {
         if (cards) supply_pile(cards, color=color) children();
         else children();
 }
+module card_divider(wide=false, color=undef) {
+    // wide version is for deck boxes, tall version for card trays
+    // deck boxes have low clearance, to the dividers are shorter
+    v = wide ? [Vcard.y + 2*Rdiv, Vcard.x] : Vcard + [2*Rdiv, 2*Rdiv];
+    // TODO: rounder corners?
+    color(color) prism(Hdiv, r=Rdiv) difference() {
+        square(v, center=true);
+        xthumb = 2/3 * Dthumb;  // depth of thumb round
+        if (wide) {
+            // thumb round
+            for (i=[-1,+1]) scale([1, i])
+                translate([0, -cut0 - Vcard.x/2])
+                semistadium(xthumb-Dthumb/2+cut0, d=Dthumb);
+        } else {
+            // thumb round
+            translate([0, -cut0 - Vtray.y/2])
+                semistadium(xthumb-Dthumb/2+cut0, d=Dthumb);
+            // bottom index hole
+            translate([0, xthumb/3])
+            stadium(xthumb, d=Dthumb, a=90);
+        }
+    }
+}
 module scoop_well(h, v, r0, r1, cut=cut0) {
     d0 = (sqrt(2)-1)*r0;  // distance from corner to r0 at top
     d1 = (2*sqrt(2)-1)*r1;  // distance from corner to r1 at bottom
@@ -839,6 +863,8 @@ print_quality = Qfinal;  // or Qdraft
 *token_tray($fa=print_quality);
 *token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
+*card_divider(wide=false, $fa=print_quality);
+*card_divider(wide=true, $fa=print_quality);
 
 *organizer(tier=1);
 organizer();

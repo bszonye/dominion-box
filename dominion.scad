@@ -276,15 +276,15 @@ Vadvsquare = [44, 34, 2];  // square token dimensions
 Nadvsquare = 2 * Nplayers;
 
 // container metrics
-Rext = 3;  // external corner radius
+Rext = 3.0;  // external corner radius
 Rint = Rext-wall0;  // internal corner radius (dx from contents to wall)
 Rdiv = Rint/2;
-Hdiv = Rint;
+Hdiv = 1.0;
 echo(Rext=Rext, Rint=Rint, Rdiv=Rdiv, Hdiv=Hdiv);
 
 Avee = 60;  // angle for index v-notches and lattices
-Dthumb = 25;  // index hole diameter
-Dstrut = 12;  // width of struts and corner braces
+Dthumb = 25.0;  // index hole diameter
+Dstrut = 12.0;  // width of struts and corner braces
 echo(Avee=Avee, Dthumb=Dthumb, Dstrut=Dstrut);
 
 Rfoot = Rext - 2 - gap0;  // concentric with Rext; leave room for 2mm wall
@@ -679,8 +679,7 @@ module card_divider(wide=false, color=undef) {
     // wide version is for deck boxes, tall version for card trays
     // deck boxes have low clearance, to the dividers are shorter
     v = wide ? [Vcard.y + 2*Rdiv, Vcard.x] : Vcard + [2*Rdiv, 2*Rdiv];
-    // TODO: rounder corners?
-    color(color) prism(Hdiv, r=Rdiv) difference() {
+    color(color) prism(Hdiv, r=Rext) difference() {
         square(v, center=true);
         xthumb = 2/3 * Dthumb;  // depth of thumb round
         if (wide) {
@@ -689,6 +688,7 @@ module card_divider(wide=false, color=undef) {
                 translate([0, -cut0 - Vcard.x/2])
                 semistadium(xthumb-Dthumb/2+cut0, d=Dthumb);
         } else {
+            // match the index holes in the underlying card tray
             // thumb round
             translate([0, -cut0 - Vtray.y/2])
                 semistadium(xthumb-Dthumb/2+cut0, d=Dthumb);
@@ -781,7 +781,7 @@ module organizer(tier=undef) {
     %color("#101080", 0.25) box(Vinterior, frame=true);
     // main card storage
     for (i=[0:1:7]) {
-        color = i < 4 ? "#a0a0a0" : "#a0a0ff";
+        color = i < 4 ? "#e0f0a0" : "#a0a0ff";
         layout_deck(i) deck_box(Dlong, seed=i, color=color);
     }
     // player mats
@@ -795,7 +795,6 @@ module organizer(tier=undef) {
             starter_box(Dshort, color="#a0a0ff");
     // base cards
     if (!tier || 1 < tier) raise_deck() {
-        // supply_pile(12, color=Cvictory);  // provinces
         layout_tray(0)
             card_tray(h=2, cards=30, color=Cgold);  // gold
         layout_tray(1)
@@ -803,7 +802,7 @@ module organizer(tier=undef) {
         layout_tray(2)
             card_tray(h=2, cards=32, color=Ccopper);  // copper
         layout_tray(3)
-            card_tray(h=2, cards=30, color=Cruins);  // trash / ruins
+            card_tray(h=2, cards=30, color=Ccurse);  // curses
         // extra cards for 5+ players
         layout_tray(4)
             card_tray(h=2, cards=18, color=Cgold);  // gold
@@ -814,13 +813,13 @@ module organizer(tier=undef) {
         layout_tray(7)
             card_tray(h=2, color="#ffa000");  // orange-yellow spare deck
         layout_tray(8)
-            card_tray(cards=18, color=Cvictory);  // colony
+            card_tray(cards=12, color=Csilver);  // platinum
         layout_tray(9)
-            card_tray(cards=18, color=Cvictory);  // province
+            card_tray(cards=18, color=Cvictory);  // colony
         layout_tray(10)
-            card_tray(cards=18, color=Cvictory);  // spare victory cards
+            card_tray(color=Cruins);  // trash
         layout_tray(11)
-            card_tray(h=2, cards=30, color=Ccurse);  // curses
+            card_tray(h=2, color=Cruins);  // trash / ruins
         layout_tray(12)
             token_tray(color=player_colors[1]);
         layout_tray(13)
@@ -832,7 +831,7 @@ module organizer(tier=undef) {
     }
     if (!tier || 1 < tier) raise_deck(1) {
         layout_tray(8)
-            card_tray(cards=12, color=Csilver);  // platinum
+            card_tray(cards=18, color=Cvictory);  // province
         layout_tray(9)
             card_tray(cards=12, color=Cvictory);  // duchy
         layout_tray(10)
@@ -846,8 +845,8 @@ module organizer(tier=undef) {
     }
     // these should accommodate all of the Adventures tokens
     translate([0, Vfloor.y/2-Vmats.x-Vlongtray.y/2-gap0]) {
-        token_long_tray(color="#a0a0ff");
-        raise_deck(1, 0) token_long_tray(color="#a0a0ff");
+        token_long_tray(color="#404040");
+        raise_deck(1, 0) token_long_tray(color="#404040");
     }
 }
 

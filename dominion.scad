@@ -106,7 +106,7 @@ no_sleeve = 0;
 md_standard = 0.08;  // 40 micron sleeves (Mayday standard)
 ug_classic = 0.08;  // 40 micron sleeves (Ultimate Guard classic)
 ug_premium = 0.10;  // 50 micron sleeves (Ultimate Guard premium soft)
-sk_standard = 0.125;  // 60 micron sleeves (Sleeve Kings standard)
+sk_standard = 0.13;  // 60 micron sleeves (Sleeve Kings standard)
 md_premium = 0.18;  // 90 micron sleeves (Mayday premium)
 gg_prime = 0.20;  // 100 micron sleeves (Gamegenic prime)
 sk_premium = 0.20;  // 100 micron sleeves (Sleeve Kings premium)
@@ -133,6 +133,8 @@ function vdeck(n=1, sleeve, quality, card=dominion_card, wide=false) = [
 // silver cards (set of 70)
 // echo(s70=29/70, vdeck(70, euro_sleeve, ug_premium));
 // 29mm / 70 Dominion cards = 414 microns/card
+// echo(s70=31/70, vdeck(70, euro_sleeve, sk_standard));
+// 31mm / 70 Dominion cards = 443 microns/card
 // gold cards (set of 48)
 // echo(g48=20.0/48, vdeck(48, euro_sleeve, ug_premium));
 // 19.7-20.5mm w/UG sleeves = 410-427 microns/card
@@ -141,6 +143,9 @@ function vdeck(n=1, sleeve, quality, card=dominion_card, wide=false) = [
 // echo(g30=9.6/30, vdeck(30, euro_sleeve, no_sleeve));
 // 12.3-12.7mm w/UG sleeves = 410-423 microns/card
 // 9.2-9.6mm unsleeved = 307-320 microns/card
+// starter decks (set of 60)
+// echo(s60=27/60, vdeck(60, euro_sleeve, sk_standard));
+// 31mm / 70 Dominion cards = 450 microns/card
 
 // basic metrics
 wall0 = 2;  // eround(xwall(4));
@@ -307,6 +312,7 @@ Dlong = Vfloor.y / 2;
 Vlong = deck_box_volume(Dlong);
 Dshort = Vfloor.x - 4*Vlong.x;
 Vshort = deck_box_volume(Dshort);
+echo(cards=card_count(Dlong, quality=sk_standard));
 
 function tray_volume(h=1) =
     [Vtray.x, Vtray.y, h*Vtray.z];
@@ -702,7 +708,7 @@ module scoop_well(h, v, r0, r1, cut=cut0) {
     d0 = (sqrt(2)-1)*r0;  // distance from corner to r0 at top
     d1 = (2*sqrt(2)-1)*r1;  // distance from corner to r1 at bottom
     dc = d1 - d0;
-    h1 = h;  // h1 = dc and h1 = r1 are good alternatives
+    h1 = h - Hfoot - gap0;  // h1 = dc and h1 = r1 are good alternatives
     hull() {
         raise(h) prism(cut, v, r=r0);
         for (a=[0:$fa:90]) {
@@ -860,10 +866,10 @@ print_quality = Qfinal;  // or Qdraft
 *card_tray(h=2, cards=50, $fa=print_quality);
 *card_tray(cards=10, $fa=print_quality);
 *token_tray($fa=print_quality);
-*token_long_tray($fa=print_quality);
+token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
 *card_divider(wide=false, $fa=print_quality);
 *card_divider(wide=true, $fa=print_quality);
 
 *organizer(tier=1);
-organizer();
+*organizer();

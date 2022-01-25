@@ -732,10 +732,10 @@ module token_tray(scoop=Dstrut/2, color=undef) {
         prism(vtray.z, shell, r=Rext);
         raise(floor0) for (i=[-1,+1]) {
             translate([0, vtray.y/2 - wall0 - wella.y/2])
-                scoop_well(vtray.z, wella, r0=Rint, r1=scoop);
+                scoop_well(vtray.z-floor0, wella, r0=Rint, r1=scoop);
             translate([i*(vtray.x/2 - wall0 - wellb.x/2),
                     wellb.y/2 + wall0 - vtray.y/2])
-                scoop_well(vtray.z, wellb, r0=Rint, r1=scoop);
+                scoop_well(vtray.z-floor0, wellb, r0=Rint, r1=scoop);
         }
         tray_feet_cut();
     }
@@ -752,9 +752,9 @@ module token_long_tray(scoop=Dstrut/2, color=undef) {
         prism(vtray.z, shell, r=Rext);
         raise(floor0) for (i=[-1,+1]) {
             translate([0, i*(vtray.y/2 - wall0 - wella.y/2)])
-                scoop_well(vtray.z, wella, r0=Rint, r1=scoop);
+                scoop_well(vtray.z-floor0, wella, r0=Rint, r1=scoop);
             translate([i*(vtray.x/2 - wall0 - wellb.x/2), 0])
-                scoop_well(vtray.z, wellb, r0=Rint, r1=scoop);
+                scoop_well(vtray.z-floor0, wellb, r0=Rint, r1=scoop);
         }
     }
     %raise() rotate(90) children();  // card stack
@@ -865,8 +865,8 @@ print_quality = Qfinal;  // or Qdraft
 *mat_frame(Vmats, $fa=print_quality);
 *card_tray(h=2, cards=50, $fa=print_quality);
 *card_tray(cards=10, $fa=print_quality);
-*token_tray($fa=print_quality);
-token_long_tray($fa=print_quality);
+token_tray($fa=print_quality);
+*token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
 *card_divider(wide=false, $fa=print_quality);
 *card_divider(wide=true, $fa=print_quality);

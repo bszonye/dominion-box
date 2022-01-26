@@ -376,7 +376,7 @@ module prism(h, shape=undef, r=undef, r1=undef, r2=undef,
     else if (is_list(shape) && is_list(shape[0])) polygon(shape);
     else square(shape, center=true);
 }
-module lattice_cut(v, i, j=0, h0=0, d=undef, a=Avee, r=Rint, tiers=1,
+module lattice_cut(v, i, j=0, h0=0, dstrut=Dstrut/2, a=Avee, r=Rint, tiers=1,
                    flip=false, open=false, center=false, cut=cut0) {
     // v: lattice volume
     // i: horizontal position
@@ -387,7 +387,6 @@ module lattice_cut(v, i, j=0, h0=0, d=undef, a=Avee, r=Rint, tiers=1,
     // r: corner radius
     // tiers: number of tiers in vertical split
     // center: start pattern at center instead of end
-    dstrut = is_undef(d) ? Dstrut / tiers : d;
     htri = (v.z - dstrut) / tiers; // trestle height
     dtri = 2*eround(htri/tan(a));  // trestle width (triangle base)
     dycut = v.y + 2*cut; // depth for cutting through Y axis
@@ -478,32 +477,32 @@ module mat_frame(size=Vmats, color=undef) {
     shell = [size.x, size.y];
     well = shell - 2*[wall0, wall0];
     // notch dimensions:
-    hvee = Dstrut;
-    axvee = max(atan(2 * (size.z-Dstrut) / (size.x-3*Dstrut)), Avee);
-    ayvee = max(atan(2 * (size.z-Dstrut) / (size.y-3*Dstrut)), Avee);
-    dxvee = size.x - 2*Dstrut - 2*(size.z-hvee) / tan(axvee);
-    dyvee = size.y - 2*Dstrut - 2*(size.z-hvee) / tan(ayvee);
-    vxside = [dxvee, size.y, size.z-hvee];
-    vyside = [dyvee, size.x, size.z-hvee];
+    dtop = size.x - 2*Dstrut;  // corner supports
+    htri = (size.z - Dstrut/2) / 3;
+    hvee = htri/2 + Dstrut/2;  // halfway up the first tier
+    dtri = 2*eround(htri/tan(Avee));  // trestle width (triangle base)
+    xstrut = eround(Dstrut/2/sin(Avee));
+    vend = [dtri/2-xstrut/2, size.y, size.z-hvee];
     color(color) difference() {
         // outer shell
         prism(size.z, shell, r=Rext);
         // card well
         raise(floor0) prism(size.z+2*gap0, well, r=Rint);
         // base round
-        vhole = [(shell.x-3*Dstrut)/2, shell.y-2*Dstrut];
-        raise(-gap0) for(i=[-1,+1])
+        vhole = [(shell.x-4*Dstrut)/3, shell.y-2*Dstrut];
+        echo(vhole=vhole);
+        raise(-gap0) for(i=[-1:1:+1])
             translate([i*(shell.x-vhole.x-2*Dstrut)/2, 0])
             prism(size.z, vhole, r=Dthumb/2);
-        // vee cuts
-        raise(hvee) {
-            wall_vee_cut(vxside, a=axvee);  // end cuts
-            rotate(90) wall_vee_cut(vyside, a=ayvee);  // side cuts
+        // side cuts
+        raise(hvee) wall_vee_cut(vend);  // end vee
+        // lattice
+        ysize = [size.y, size.x, size.z];
+        for (j=[0:1:2]) for (i=[-4:1:+4]) {
+            lattice_cut(size, i, j, tiers=3, flip=true, center=true);
+            rotate(90)
+                lattice_cut(ysize, i, j, tiers=3, flip=true, center=true);
         }
-        // lattice cuts
-        x0 = dxvee/2 - hvee/tan(axvee);
-        for (i=[-1,+1]) scale([i, 1]) translate([x0, 0])
-            lattice_cut([size.x/2-x0, size.y, size.z], 0, a=axvee);
     }
 }
 module player_mats(d, n=Nplayers, lean=true) {
@@ -882,4 +881,4 @@ print_quality = Qfinal;  // or Qdraft
 *creasing_tool(12, $fa=print_quality);
 
 *organizer(tier=1);
-*organizer();
+organizer();

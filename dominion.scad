@@ -98,7 +98,7 @@ yellow_sleeve = [44, 67];  // Mini American
 catan_sleeve = [56, 82];  // Catan (English)
 
 // Sleeve Kings sleeves
-euro_sleeve = [62, 94];  // Standard European
+euro_sleeve = [61.5, 94];  // Standard European
 super_large_sleeve = [104, 129];
 
 // sleeve thickness
@@ -474,7 +474,7 @@ module starter_box(d=Dshort, color=undef) {
     %raise() translate([0, wall0-Dshort/2])
         starter_decks(Dshort-2*wall0);
 }
-module mat_frame(size, color=undef) {
+module mat_frame(size=Vmats, color=undef) {
     shell = [size.x, size.y];
     well = shell - 2*[wall0, wall0];
     // notch dimensions:
@@ -579,6 +579,14 @@ module random_piles(d, seed=0) {
     c = random_colors(nc, seed=seed+1);
     index_piles(dv, nv, cards=12, colors=[card_colors[3]])
     index_piles(dc, nc, cards=10, colors=c);
+}
+module creasing_tool(cards=10) {
+    // block for creasing index wrappers
+    margin = (Vcard.x - Dthumb) / 2;
+    prism(supply_pile_size(cards)) difference() {
+        square(Vcard, center=true);
+        stadium_fill([Dthumb, Vcard.y - 2*margin]);
+    }
 }
 module lean(h, d, amin=0) {
     alean = max(acos(d/h), amin);
@@ -862,14 +870,16 @@ module organizer(tier=undef) {
 print_quality = Qfinal;  // or Qdraft
 *deck_box(seed=0, $fa=print_quality);
 *starter_box($fa=print_quality);
-*mat_frame(Vmats, $fa=print_quality);
+*mat_frame($fa=print_quality);
 *card_tray(h=2, cards=50, $fa=print_quality);
 *card_tray(cards=10, $fa=print_quality);
-token_tray($fa=print_quality);
+*token_tray($fa=print_quality);
 *token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
 *card_divider(wide=false, $fa=print_quality);
 *card_divider(wide=true, $fa=print_quality);
+*creasing_tool(10, $fa=print_quality);
+*creasing_tool(12, $fa=print_quality);
 
 *organizer(tier=1);
 *organizer();

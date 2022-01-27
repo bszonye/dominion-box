@@ -299,7 +299,7 @@ echo(Rfoot=Rfoot, Dfoot=Dfoot, Hfoot=Hfoot);
 
 Hdstuff = Hfoot + floor0 + Vcard.x + index_card;
 Htray = 13;
-Hdeck = Hdstuff + 0.75;
+Hdeck = 65.5;
 Hstack = Hdeck + 2*Htray;
 Hroom = Vinterior.z - Hstack;
 Hdroom = Hdeck - Hdstuff;
@@ -319,7 +319,7 @@ function tray_volume(h=1) =
 Vtray2 = [Dlong/2, Vcard.y + 2*Rext];
 Vtray = [Vtray2.x, Vtray2.y, Htray];
 Vlongtray = [Dshort, Dlong, Htray];
-Vmats = [Vfloor.y - Vlongtray.y, Dshort, Hdeck+2*Htray];
+Vmats = [Vfloor.y - Vlongtray.y, Dshort, Hstack];
 
 // colors
 card_colors = [
@@ -475,7 +475,7 @@ module starter_box(d=Dshort, color=undef) {
 }
 module mat_frame(size=Vmats, color=undef) {
     shell = [size.x, size.y];
-    well = shell - 2*[wall0, wall0];
+    well = shell - 3*[wall0, wall0];
     // notch dimensions:
     dtop = size.x - 2*Dstrut;  // corner supports
     htri = (size.z - Dstrut/2) / 3;
@@ -869,7 +869,7 @@ module organizer(tier=undef) {
 print_quality = Qfinal;  // or Qdraft
 *deck_box(seed=0, $fa=print_quality);
 *starter_box($fa=print_quality);
-*mat_frame($fa=print_quality);
+mat_frame($fa=print_quality);
 *card_tray(h=2, cards=50, $fa=print_quality);
 *card_tray(cards=10, $fa=print_quality);
 *token_tray($fa=print_quality);
@@ -881,4 +881,4 @@ print_quality = Qfinal;  // or Qdraft
 *creasing_tool(12, $fa=print_quality);
 
 *organizer(tier=1);
-organizer();
+*organizer();

@@ -299,7 +299,7 @@ echo(Rfoot=Rfoot, Dfoot=Dfoot, Hfoot=Hfoot);
 
 Hdstuff = Hfoot + floor0 + Vcard.x + index_card;
 Htray = 13;
-Hdeck = Hdstuff + 0.25;
+Hdeck = Hdstuff + 0.75;
 Hstack = Hdeck + 2*Htray;
 Hroom = Vinterior.z - Hstack;
 Hdroom = Hdeck - Hdstuff;

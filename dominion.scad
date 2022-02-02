@@ -326,14 +326,16 @@ card_colors = [
     "#f0f0ff",  //  0 = action (gray)
     "#ffff00",  //  1 = treasure (yellow)
     "#a0a0ff",  //  2 = reaction (blue)
-    "#00ff00",  //  3 = victory (green)
+    "#008000",  //  3 = victory (green)
     "#8000ff",  //  4 = curse (purple)
     "#c0a0ff",  //  5 = attack (light purple)
     "#ff8000",  //  6 = duration (orange)
     "#804000",  //  7 = ruins (brown)
-    "#202020",  //  8 = night (black)
+    "#404040",  //  8 = night (black)
     "#ffc080",  //  9 = reserve (tan)
-    "#c00000",  // 10 = shelter(red)
+    "#c00000",  // 10 = shelter (red)
+    "#c0ff80",  // 11 = boon (light green)
+    "#000080",  // 12 = hex (dark blue)
 ];
 Caction = card_colors[0];
 Ctreasure = card_colors[1];
@@ -346,7 +348,8 @@ Cruins = card_colors[7];
 Cnight = card_colors[8];
 Creserve = card_colors[9];
 Cshelter = card_colors[10];
-Ctrash = "#202020";
+Cboon = card_colors[11];
+Chex = card_colors[12];
 Cgold = "#ffc000";
 Csilver = "#a0a0a0";
 Ccopper = "#c08000";
@@ -634,13 +637,13 @@ module tray_foot(cut=0) {
         prism(Hfoot + hleg, dleg);
     }
 }
-module card_well(h=1, hfloor=floor0, cut=cut0) {
+module card_well(h=1, cut=cut0) {
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = shell - 2*[wall0, wall0];
-    raise(hfloor) {
+    raise(floor0) {
         // tapered well
-        hwell = vtray.z - hfloor;
+        hwell = vtray.z - floor0;
         h1 = hwell - Hfoot;
         v0 = Vcard;
         v1 = well - 2*[Rint, Rint];
@@ -657,7 +660,7 @@ module card_well(h=1, hfloor=floor0, cut=cut0) {
         }
         // thumb vee
         translate([0, wall0-vtray.y]/2)
-            wall_vee_cut([Dthumb, wall0, vtray.z-hfloor], cut=cut);
+            wall_vee_cut([Dthumb, wall0, vtray.z-floor0], cut=cut);
     }
     raise(-cut) linear_extrude(vtray.z+2*cut-epsilon) {
         // thumb round
@@ -673,20 +676,54 @@ module card_tray(h=1, cards=0, color=undef) {
     hfloor = max(floor0, 2.0*h/2);
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
-    well = tray_volume(h=h) - [2*wall0, 2*wall0];
+    well = shell - 2*[wall0, wall0];
     origin = [well.x/2 + wall0 - shell.x/2, 0];
     dx = well.x + wall0;
-    echo(cards=card_count(vtray.z-hfloor, quality=sk_standard),
+    echo(cards=card_count(vtray.z-floor0, quality=sk_standard),
         well=well, margin=well-Vcard);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
-        card_well(h=h, hfloor=hfloor);
+        card_well(h=h);
         tray_feet_cut();
     }
 
-    %raise(hfloor+epsilon) rotate(90)  // card stack
+    %raise() rotate(90)  // card stack
         if (cards) supply_pile(cards, color=color) children();
         else children();
+}
+module draw_tray(h=2, cards=0, color=undef) {
+    vtray = tray_volume(h=h+1);
+    shell = [vtray.x, vtray.y];
+    well = shell - 2*[wall0, wall0];
+    origin = [well.x/2 + wall0 - shell.x/2, 0];
+    dx = well.x + wall0;
+    srise = Htray - floor0;
+    slope = atan(srise / well.y);
+    mslope = [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, -sin(slope), 1, 0],
+    ];
+    echo(cards=card_count(vtray.z-floor0, quality=sk_standard),
+        well=well, margin=well-Vcard);
+    color(color) difference() {
+        prism(vtray.z, shell, r=Rext);
+        // sloped floor
+        raise(floor0 + srise/2) multmatrix(m=mslope)
+            prism(vtray.z+cut0, well, r=Rint);
+        // open front
+        translate([0, -vtray.y/2, Htray]) rotate(90)
+            wall_vee_cut([2*Rext, vtray.x + cut0, vtray.z-Htray]);
+        raise(-cut0) linear_extrude(vtray.z+2*cut0-epsilon) {
+            // thumb round
+            xthumb = 2/3 * Dthumb;  // depth of thumb round
+            translate([0, -cut0-vtray.y/2])
+                semistadium(xthumb-Dthumb/2+cut0, d=Dthumb);
+            // bottom index hole
+            translate([0, xthumb/3]) stadium(xthumb, d=Dthumb, a=90);
+        }
+        tray_feet_cut();
+    }
 }
 module card_divider(wide=false, color=undef) {
     // wide version is for deck boxes, tall version for card trays
@@ -794,18 +831,18 @@ module organizer(tier=undef) {
     %color("#101080", 0.25) box(Vinterior, frame=true);
     // main card storage
     for (i=[0:1:7]) {
-        color = i < 4 ? "#e0f0a0" : "#a0a0ff";
+        color = i < 4 ? "#c0c080" : "#a0a0ff";
         layout_deck(i) deck_box(Dlong, seed=i, color=color);
     }
     // player mats
     translate(-[0, Vmats.x/2 - Vfloor.y/2 - gap0/2]) rotate(-90) {
-        mat_frame(Vmats, color="#a0a0ff");
+        mat_frame(Vmats, color=Cnight);
         %raise() player_mats(Vmats.y-2*Rext);
     }
     // starting decks (including heirlooms & shelters)
     if (!tier || 1 < tier) raise_deck(2, deck=0)
         translate([0, Dlong/2 - Vfloor.y/2]) rotate(-90)
-            starter_box(Dshort, color="#a0a0ff");
+            starter_box(Dshort, color="#c0c080");
     // base cards
     if (!tier || 1 < tier) raise_deck() {
         layout_tray(0)
@@ -822,17 +859,17 @@ module organizer(tier=undef) {
         layout_tray(5)
             card_tray(h=2, cards=30, color=Csilver);  // silver
         layout_tray(6)
-            card_tray(h=2, cards=20, color=Ccopper);  // copper
+            card_tray(h=2, cards=20, color=Cruins);  // trash
         layout_tray(7)
-            card_tray(h=2, color="#ffa000");  // orange-yellow spare deck
+            card_tray(h=2, cards=30, color="#ffa000");  // page->champion
         layout_tray(8)
             card_tray(cards=12, color=Csilver);  // platinum
         layout_tray(9)
             card_tray(cards=18, color=Cvictory);  // colony
         layout_tray(10)
-            card_tray(color=Cruins);  // trash
+            card_tray(cards=13, color=Cruins);  // states
         layout_tray(11)
-            card_tray(h=2, color=Cruins);  // trash / ruins
+            card_tray(cards=12, color=Chex);  // hexes
         layout_tray(12)
             token_tray(color=player_colors[1]);
         layout_tray(13)
@@ -840,7 +877,7 @@ module organizer(tier=undef) {
         layout_tray(14)
             token_tray(color=player_colors[5]);
         layout_tray(15)
-            card_tray(h=2, color="#a020ff");  // purple-pink spare deck
+            card_tray(h=2, color="#a020ff");  // peasant->teacher
     }
     if (!tier || 1 < tier) raise_deck(1) {
         layout_tray(8)
@@ -849,6 +886,8 @@ module organizer(tier=undef) {
             card_tray(cards=12, color=Cvictory);  // duchy
         layout_tray(10)
             card_tray(cards=12, color=Cvictory);  // estate
+        layout_tray(11)
+            card_tray(cards=12, color=Cboon);  // boons
         layout_tray(12)
             token_tray(color=player_colors[2]);
         layout_tray(13)
@@ -858,8 +897,8 @@ module organizer(tier=undef) {
     }
     // these should accommodate all of the Adventures tokens
     translate([0, Vfloor.y/2-Vmats.x-Vlongtray.y/2-gap0]) {
-        token_long_tray(color="#404040");
-        raise_deck(1, 0) token_long_tray(color="#404040");
+        token_long_tray(color=Cnight);
+        raise_deck(1, 0) token_long_tray(color=Cnight);
     }
 }
 
@@ -869,9 +908,10 @@ module organizer(tier=undef) {
 print_quality = Qfinal;  // or Qdraft
 *deck_box(seed=0, $fa=print_quality);
 *starter_box($fa=print_quality);
-mat_frame($fa=print_quality);
+*mat_frame($fa=print_quality);
 *card_tray(h=2, cards=50, $fa=print_quality);
 *card_tray(cards=10, $fa=print_quality);
+draw_tray($fa=print_quality);
 *token_tray($fa=print_quality);
 *token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);

@@ -707,22 +707,23 @@ module draw_tray(h=2, cards=0, color=undef) {
     echo(cards=card_count(vtray.z-floor0, quality=sk_standard),
         well=well, margin=well-Vcard);
     color(color) difference() {
-        prism(vtray.z, shell, r=Rext);
+        prism(vtray.z, r=Rext) difference() {
+            square(shell, center=true);
+            xthumb = 2/3 * Dthumb;
+            // thumb round
+            translate([0, -cut0 - Vtray.y/2])
+                semistadium(xthumb-Dthumb/2+cut0, d=Dthumb);
+            // bottom index hole
+            translate([0, xthumb/3])
+            stadium(xthumb, d=Dthumb, a=90);
+        }
+        tray_feet_cut();
         // sloped floor
         raise(floor0 + srise/2) multmatrix(m=mslope)
             prism(vtray.z+cut0, well, r=Rint);
         // open front
         translate([0, -vtray.y/2, Htray]) rotate(90)
             wall_vee_cut([2*Rext, vtray.x + cut0, vtray.z-Htray]);
-        raise(-cut0) linear_extrude(vtray.z+2*cut0-epsilon) {
-            // thumb round
-            xthumb = 2/3 * Dthumb;  // depth of thumb round
-            translate([0, -cut0-vtray.y/2])
-                semistadium(xthumb-Dthumb/2+cut0, d=Dthumb);
-            // bottom index hole
-            translate([0, xthumb/3]) stadium(xthumb, d=Dthumb, a=90);
-        }
-        tray_feet_cut();
     }
 }
 module card_divider(wide=false, color=undef) {

@@ -637,16 +637,16 @@ module tray_foot(cut=0) {
         prism(Hfoot + hleg, dleg);
     }
 }
-module card_well(h=1, cut=cut0) {
+module card_well(h=1, slope=true, cut=cut0) {
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
     well = shell - 2*[wall0, wall0];
     raise(floor0) {
-        // tapered well
         hwell = vtray.z - floor0;
         h1 = hwell - Hfoot;
-        v0 = Vcard;
         v1 = well - 2*[Rint, Rint];
+        // if set, the well slopes inward to center the cards
+        v0 = slope ? Vcard : v1;
         echo(v0=v0, v1=v1);
         hull() {
             raise(hwell) prism(cut, well, r=Rint);
@@ -659,8 +659,12 @@ module card_well(h=1, cut=cut0) {
             }
         }
         // thumb vee
+        dy = vtray.z - floor0;
+        dx = vtray.x/2 - Dthumb/2 - Dstrut/2;
+        a = max(Avee, atan(dy/dx));
+        echo(a=a);
         translate([0, wall0-vtray.y]/2)
-            wall_vee_cut([Dthumb, wall0, vtray.z-floor0], cut=cut);
+            wall_vee_cut([Dthumb, wall0, vtray.z-floor0], a=a, cut=cut);
     }
     raise(-cut) linear_extrude(vtray.z+2*cut-epsilon) {
         // thumb round
@@ -672,7 +676,7 @@ module card_well(h=1, cut=cut0) {
         stadium(xthumb, d=Dthumb, a=90);
     }
 }
-module card_tray(h=1, cards=0, color=undef) {
+module card_tray(h=1, slope=true, cards=0, color=undef) {
     hfloor = max(floor0, 2.0*h/2);
     vtray = tray_volume(h=h);
     shell = [vtray.x, vtray.y];
@@ -683,7 +687,7 @@ module card_tray(h=1, cards=0, color=undef) {
         well=well, margin=well-Vcard);
     color(color) difference() {
         prism(vtray.z, shell, r=Rext);
-        card_well(h=h);
+        card_well(h=h, slope=slope);
         tray_feet_cut();
     }
 
@@ -912,7 +916,7 @@ print_quality = Qfinal;  // or Qdraft
 *mat_frame($fa=print_quality);
 *card_tray(h=2, cards=50, $fa=print_quality);
 *card_tray(cards=10, $fa=print_quality);
-draw_tray($fa=print_quality);
+*draw_tray($fa=print_quality);
 *token_tray($fa=print_quality);
 *token_long_tray($fa=print_quality);
 *tray_foot($fa=print_quality);
@@ -922,4 +926,4 @@ draw_tray($fa=print_quality);
 *creasing_tool(12, $fa=print_quality);
 
 *organizer(tier=1);
-*organizer();
+organizer();

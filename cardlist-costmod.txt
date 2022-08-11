@@ -1,0 +1,31 @@
+Champion
+Disciple
+Fugitive
+Hero
+Soldier
+Teacher
+Treasure Hunter
+Warrior
+Bag of Gold
+Diadem
+Followers
+Princess
+Trusty Steed
+Madman
+Mercenary
+Spoils
+Doctor
+Herald
+Masterpiece
+Stonemason
+Animal Fair
+Destrier
+Fisherman
+Wayfarer
+Horse
+Bat
+Ghost
+Imp
+Will-O'-Wisp
+Wish
+Peddler

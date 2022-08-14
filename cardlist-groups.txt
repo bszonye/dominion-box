@@ -1,0 +1,11 @@
+Page → Champion
+Peasant → Teacher
+Vampire / Bat
+# Global groups
+# Boons
+# Hexes
+# States
+# Events - All
+# Landmarks - All
+# Projects - All
+# Ways - All

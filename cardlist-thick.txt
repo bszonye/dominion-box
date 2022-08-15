@@ -50,11 +50,11 @@ Estate
 Curse
 
 # Global groups
-Allies
-Boons
-Hexes
-States
-Events - All
-Landmarks - All
-Projects - All
-Ways - All
+- Allies
+- Boons
+- Hexes
+- States
+- Events - All
+- Landmarks - All
+- Projects - All
+- Ways - All

@@ -13,11 +13,44 @@
 - Pasture
 - Tracker / Pouch
 - Pouch
-# Groups
+
+# Large groups
+- Hermit / Madman
+- Horse
+# Necromancer / Zombies
+- Rats
+- Tournament and Prizes
+- Urchin / Mercenary
+- Ruins
+# Imp
 - Page → Champion
 - Peasant → Teacher
 - Vampire / Bat
+- Shelters
+- Spoils
+
+# Allies
+- Augurs
+- Clashes
+- Forts
+- Odysseys
+- Townsfolk
+- Wizards
+
+# Base cards
+- Potion
+- Platinum
+- Gold
+- Silver
+- Copper
+- Colony
+- Province
+- Duchy
+- Estate
+- Curse
+
 # Global groups
+- Allies
 - Boons
 - Hexes
 - States

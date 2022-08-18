@@ -17,12 +17,12 @@
 # Large groups
 Hermit / Madman
 Horse
-# Necromancer / Zombies
+Necromancer / Zombies
 Rats
 Tournament and Prizes
 Urchin / Mercenary
 Ruins
-# Imp
+Imp
 Page → Champion
 Peasant → Teacher
 Vampire / Bat

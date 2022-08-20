@@ -1,0 +1,60 @@
+# Heirlooms
+- Cemetery / Haunted Mirror
+- Haunted Mirror
+- Fool / Lucky Coin
+- Lucky Coin
+- Pixie / Goat
+- Goat
+- Pooka / Cursed Gold
+- Cursed Gold
+- Secret Cave / Magic Lamp
+- Magic Lamp
+- Shepherd / Pasture
+- Pasture
+- Tracker / Pouch
+- Pouch
+
+# Large groups
+- Hermit / Madman
+- Horse
+- Necromancer / Zombies
+- Rats
+- Tournament and Prizes
+- Urchin / Mercenary
+- Ruins
+- Imp
+- Page → Champion
+- Peasant → Teacher
+- Vampire / Bat
+- Shelters
+- Spoils
+
+# Allies
+- Augurs
+- Clashes
+- Forts
+- Odysseys
+- Townsfolk
+- Wizards
+
+# Base cards
+- Potion
+- Platinum
+- Gold
+- Silver
+- Copper
+- Colony
+- Province
+- Duchy
+- Estate
+- Curse
+
+# Global groups
+- Allies
+- Boons
+- Hexes
+- States
+- Events - All
+- Landmarks - All
+- Projects - All
+- Ways - All

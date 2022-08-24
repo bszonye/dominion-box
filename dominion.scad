@@ -4,11 +4,20 @@ include <game-box/game.scad>
 
 Qprint = Qfinal;  // or Qdraft
 
+// general metrics
 Vcard = Vsleeve_euro;
 Hcard = Hcard_dominion + Hsleeve_kings;
 Htray = 13;
-Hdeck = 65.5;
+
+// Dominion-specific metrics
+Dlong = Vgame.y / 2;
+Vlong = deck_box_volume(Dlong);
+Dshort = Vgame.x - 4*Vlong.x;
+Vlongtray = [Dshort, Dlong, Htray];
+echo(Dlong=Dlong, Dshort=Dshort);
+Hdeck = Hfloor + Vcard.x + Hlip;  // deckbox height
 Hstack = Hdeck + 2*Htray;
+echo(Hdeck=Hdeck, Hstack=Hstack);
 
 // box metrics
 // TODO: metrics for standard and small expansion boxes
@@ -165,9 +174,29 @@ module mat_frame(size=Vmats, color=undef) {
         }
     }
 }
-
-
-module token_long_tray(scoop=Dstrut/2, color=undef) {
+module player_token_tray(scoop=2*Rext, color=undef) {
+    // TODO: configurable partitions
+    vtray = Vtray;
+    shell = [vtray.x, vtray.y];
+    origin = [Dwall-shell.x/2, Dwall-shell.y/2];
+    wella = [vtray.x-2*Dwall, Vlongtray.y - vtray.y - Dwall];
+    wellb = [(vtray.x-3*Dwall)/2, vtray.y - wella.y - 3*Dwall];
+    colorize(color) difference() {
+        prism(vtray, r=Rext);
+        raise(Hfloor) {
+            walls = 2 * area(Dwall);
+            dva = (vtray - wella - walls) / 2;
+            dvb = (wellb - vtray + walls) / 2;
+            translate(dva)
+                scoop_well(wella, vtray.z-Hfloor);
+            for (i=[-1,+1]) translate([i*dvb.x, dvb.y])
+                scoop_well(wellb, vtray.z-Hfloor);
+        }
+        tray_feet_cut();
+    }
+    %raise(vtray.z) children();
+}
+module metal_token_tray(scoop=2*Rext, color=undef) {
     vtray = Vlongtray;
     shell = [vtray.x, vtray.y];
     origin = [Dwall-shell.x/2, Dwall-shell.y/2];
@@ -181,13 +210,13 @@ module token_long_tray(scoop=Dstrut/2, color=undef) {
         echo(dva=dva, dvb=dvb);
         raise(Hfloor) for (i=[-1,+1]) {
             translate([0, i*dva.y])
-                scoop_well(wella, vtray.z-Hfloor, rint=Rint, rscoop=scoop);
+                scoop_well(wella, vtray.z-Hfloor);
             translate([i*dvb.x, 0])
-                scoop_well(wellb, vtray.z-Hfloor, rint=Rint, rscoop=scoop);
+                scoop_well(wellb, vtray.z-Hfloor);
         }
         tray_feet_cut();
     }
-    %raise() rotate(90) children();  // card stack
+    %raise(vtray.z) children();
 }
 
 module raise_deck(n=0, deck=1, gap=Dgap/2) {
@@ -254,11 +283,11 @@ module organizer(tier=undef) {
         layout_tray(11)
             card_tray(cards=12, color=Chex);  // hexes
         layout_tray(12)
-            token_tray(color=player_colors[1]);
+            player_token_tray(color=player_colors[1]);
         layout_tray(13)
-            token_tray(color=player_colors[0]);
+            player_token_tray(color=player_colors[0]);
         layout_tray(14)
-            token_tray(color=player_colors[5]);
+            player_token_tray(color=player_colors[5]);
         layout_tray(15)
             card_tray(height=2*Htray, color="#a020ff");  // peasant->teacher
     }
@@ -272,16 +301,16 @@ module organizer(tier=undef) {
         layout_tray(11)
             card_tray(cards=12, color=Cboon);  // boons
         layout_tray(12)
-            token_tray(color=player_colors[2]);
+            player_token_tray(color=player_colors[2]);
         layout_tray(13)
-            token_tray(color=player_colors[3]);
+            player_token_tray(color=player_colors[3]);
         layout_tray(14)
-            token_tray(color=player_colors[4]);
+            player_token_tray(color=player_colors[4]);
     }
     // these should accommodate all of the Adventures tokens
     translate([0, Vgame.y/2-Vmats.x-Vlongtray.y/2-Dgap]) {
-        token_long_tray(color=Cnight);
-        raise_deck(1, 0) token_long_tray(color=Cnight);
+        metal_token_tray(color=Cnight);
+        raise_deck(1, 0) metal_token_tray(color=Cnight);
     }
 }
 
@@ -291,16 +320,17 @@ module organizer(tier=undef) {
 *card_tray(height=2*Htray, cards=50, $fa=Qprint);
 *card_tray(cards=10, $fa=Qprint);
 *draw_tray(height=2*Htray, $fa=Qprint);
-*token_tray($fa=Qprint);
-*token_long_tray($fa=Qprint);
+*player_token_tray($fa=Qprint);
+*metal_token_tray($fa=Qprint);
 *tray_foot($fa=Qprint);
 *deck_divider($fa=Qprint);
 *tray_divider($fa=Qprint);
-*creasing_tool(10, $fa=Qprint);
-*creasing_tool(12, $fa=Qprint);
+*creasing_tool(cards=10, $fa=Qprint);
+*creasing_tool(cards=12, $fa=Qprint);
 
-*grid_divider([3, 2], Vomnihive_tray, Homnihive_tray_notch, $fa=Qprint);
+*grid_divider(Vomnihive_tray, Homnihive_tray_notch, grid=[3, 2], $fa=Qprint);
 *rotate(-90) bookend_divider(Vomnihive-[2,2], Homnihive_rail-2, $fa=Qprint);
 
+*test_game_shapes();
 *organizer(tier=1);
 organizer();

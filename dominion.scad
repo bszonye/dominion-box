@@ -10,9 +10,10 @@ Hcard = Hcard_dominion + Hsleeve_kings;
 Htray = 13;
 
 // Dominion-specific metrics
+Dstrut = 12.0;  // width of lattice struts
 Dlong = Vgame.y / 2;
 Vlong = deck_box_volume(Dlong);
-Dshort = Vgame.x - 4*Vlong.x;
+Dshort = Vgame.x - 4*Vlong.y;
 Vlongtray = [Dshort, Dlong, Htray];
 echo(Dlong=Dlong, Dshort=Dshort);
 Hdeck = Hfloor + Vcard.x + Hlip;  // deckbox height
@@ -158,10 +159,10 @@ module mat_frame(size=Vmats, color=undef) {
         // card well
         raise(Hfloor) prism(well, height=size.z+2*Dgap, r=Rint);
         // base round
-        vhole = [(v.x-4*Dstrut)/3, v.y-2*Dstrut];
+        vhole = [(v.x-2*Dthumb)/3, v.y-Dthumb];
         echo(vhole=vhole);
         raise(-Dgap) for(i=[-1:1:+1])
-            translate([i*(v.x-vhole.x-2*Dstrut)/2, 0])
+            translate([i*(v.x-vhole.x-Dthumb)/2, 0])
             prism(vhole, height=size.z, r=Dthumb/2);
         // side cuts
         raise(hvee) wall_vee_cut(vend);  // end vee
@@ -229,8 +230,8 @@ module layout_tray(n, rows=4, gap=Dgap) {
     nx = sx * floor(col/2);  // x distance from center
     ny = row + (1 - rows)/2;  // y distance from center
     dy = Vgame.y / rows + gap;  // row height
-    dx = Vlong.x + gap;  // column width
-    origin = sx * [Dshort/2 + Vlong.x/2 + gap, 0];
+    dx = Vlong.y + gap;  // column width
+    origin = sx * [Dshort/2 + Vlong.y/2 + gap, 0];
     a = rows==2 ? 90+sign(ny)*90 : -sx*90;
     translate(origin + [nx*dx, ny*dy]) rotate(a) children();
 }
@@ -245,7 +246,7 @@ module organizer(tier=undef) {
     // main card storage
     for (i=[0:1:7]) {
         color = i < 4 ? "#c0c080" : "#a0a0ff";
-        layout_deck(i) deck_box(Dlong, color=color);
+        layout_deck(i) rotate(90) deck_box(Dlong, color=color);
     }
     // player mats
     translate(-[0, Vmats.x/2 - Vgame.y/2 - Dgap/2]) rotate(-90) {
@@ -253,7 +254,7 @@ module organizer(tier=undef) {
     }
     // starting decks (including heirlooms & shelters)
     if (!tier || 1 < tier) raise_deck(2, deck=0)
-        translate([0, Dlong/2 - Vgame.y/2]) rotate(-90)
+        translate([0, Dlong/2 - Vgame.y/2])
             starter_box(Dshort, color="#c0c080");
     // base cards
     if (!tier || 1 < tier) raise_deck() {

@@ -12,7 +12,7 @@ Htray = 13;
 // Dominion-specific metrics
 Dstrut = 12.0;  // width of lattice struts
 Dlong = Vgame.y / 2;
-Vlong = deck_box_volume(Dlong);
+Vlong = deck_box_volume(width=Dlong);
 Dshort = Vgame.x - 4*Vlong.y;
 Vlongtray = [Dshort, Dlong, Htray];
 echo(Dlong=Dlong, Dshort=Dshort);
@@ -95,25 +95,25 @@ player_colors = [
     "#a0a0ff",
 ];
 
-module lattice_cut(v, i, j=0, h0=0, dstrut=Dstrut/2, a=Avee, r=Rint, tiers=1,
-                   flip=false, open=false, center=false, cut=Dcut) {
+module lattice_cut(v, i, j=0, h0=0, dstrut=Dstrut/2, angle=Avee, r=Rint,
+                   tiers=1, flip=false, open=false, center=false, cut=Dcut) {
     // v: lattice volume
     // i: horizontal position
     // j: vertical position
     // h0: z intercept of pattern start (e.g. Hfloor with wall_vee_cut)
     // d: strut width
-    // a: strut angle
+    // angle: strut angle
     // r: corner radius
     // tiers: number of tiers in vertical split
     // center: start pattern at center instead of end
     htri = (v.z - dstrut) / tiers; // trestle height
-    dtri = 2*eround(htri/tan(a));  // trestle width (triangle base)
+    dtri = 2*eround(htri/tan(angle));  // trestle width (triangle base)
     dycut = v.y + 2*cut; // depth for cutting through Y axis
     dzcut = v.z + 2*cut; // height for cutting through Z axis
     tri = [[dtri/2, -htri/2], [0, htri/2], [-dtri/2, -htri/2]];
-    xstrut = eround(dstrut/2/sin(a));
+    xstrut = eround(dstrut/2/sin(angle));
     z0 = (v.z - htri*tiers) / 2;
-    x0 = center ? 0 : eround((z0 - h0) / tan(a)) + xstrut + dtri/2;
+    x0 = center ? 0 : eround((z0 - h0) / tan(angle)) + xstrut + dtri/2;
     y0 = dycut/2;
     nx = center ? i : i + j;
     x = nx/2 * dtri;
@@ -134,14 +134,11 @@ module lattice_cut(v, i, j=0, h0=0, dstrut=Dstrut/2, a=Avee, r=Rint, tiers=1,
         dvee = dtri/2 - 2*xstrut;
         if (xlimit <= xvee - dtri/2 && xvee + dtri/2 <= xlimit+limit.x) {
             translate([xvee, 0, hvee])
-                wall_vee_cut([dvee, v.y, v.z-hvee], a=a);
+                wall_vee_cut([dvee, v.y, v.z-hvee], angle=angle);
         }
     }
 }
 
-module starter_box(d=Dshort, color=undef) {
-    deck_box(d, color=color);
-}
 module mat_frame(size=Vmats, color=undef) {
     v = volume(size);
     well = area(v) - area(3*Dwall);
@@ -176,7 +173,6 @@ module mat_frame(size=Vmats, color=undef) {
     }
 }
 module player_token_tray(scoop=2*Rext, color=undef) {
-    // TODO: configurable partitions
     vtray = Vtray;
     shell = [vtray.x, vtray.y];
     origin = [Dwall-shell.x/2, Dwall-shell.y/2];
@@ -208,7 +204,6 @@ module metal_token_tray(scoop=2*Rext, color=undef) {
         walls = 2 * area(Dwall);
         dva = (vtray - wella - walls) / 2;
         dvb = (wellb - vtray + walls) / 2;
-        echo(dva=dva, dvb=dvb);
         raise(Hfloor) for (i=[-1,+1]) {
             translate([0, i*dva.y])
                 scoop_well(wella, vtray.z-Hfloor);
@@ -232,8 +227,8 @@ module layout_tray(n, rows=4, gap=Dgap) {
     dy = Vgame.y / rows + gap;  // row height
     dx = Vlong.y + gap;  // column width
     origin = sx * [Dshort/2 + Vlong.y/2 + gap, 0];
-    a = rows==2 ? 90+sign(ny)*90 : -sx*90;
-    translate(origin + [nx*dx, ny*dy]) rotate(a) children();
+    angle = rows==2 ? 90+sign(ny)*90 : -sx*90;
+    translate(origin + [nx*dx, ny*dy]) rotate(angle) children();
 }
 module layout_deck(n, gap=Dgap) {
     layout_tray(n=n, rows=2, gap=Dgap) children();
@@ -246,7 +241,7 @@ module organizer(tier=undef) {
     // main card storage
     for (i=[0:1:7]) {
         color = i < 4 ? "#c0c080" : "#a0a0ff";
-        layout_deck(i) rotate(90) deck_box(Dlong, color=color);
+        layout_deck(i) rotate(90) deck_box(width=Dlong, color=color);
     }
     // player mats
     translate(-[0, Vmats.x/2 - Vgame.y/2 - Dgap/2]) rotate(-90) {
@@ -255,7 +250,7 @@ module organizer(tier=undef) {
     // starting decks (including heirlooms & shelters)
     if (!tier || 1 < tier) raise_deck(2, deck=0)
         translate([0, Dlong/2 - Vgame.y/2])
-            starter_box(Dshort, color="#c0c080");
+            deck_box(width=Dshort, color="#c0c080");
     // base cards
     if (!tier || 1 < tier) raise_deck() {
         layout_tray(0)
@@ -315,8 +310,10 @@ module organizer(tier=undef) {
     }
 }
 
-*deck_box(seed=0, $fa=Qprint);
-*starter_box($fa=Qprint);
+*deck_box(width=40, $fa=Qprint);
+*deck_box(width=60, $fa=Qprint);
+*deck_box(width=Dshort, $fa=Qprint);
+*deck_box(width=Dlong, $fa=Qprint);
 *mat_frame($fa=Qprint);
 *card_tray(height=2*Htray, cards=50, $fa=Qprint);
 *card_tray(cards=10, $fa=Qprint);

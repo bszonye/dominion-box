@@ -241,7 +241,8 @@ module organizer(tier=undef) {
     // main card storage
     for (i=[0:1:7]) {
         color = i < 4 ? "#c0c080" : "#a0a0ff";
-        layout_deck(i) rotate(90) deck_box(width=Dlong, color=color);
+        layout_deck(i) rotate(90)
+            translate([-Dlong/2, 0]) deck_box(width=Dlong, color=color);
     }
     // player mats
     translate(-[0, Vmats.x/2 - Vgame.y/2 - Dgap/2]) rotate(-90) {
@@ -249,7 +250,7 @@ module organizer(tier=undef) {
     }
     // starting decks (including heirlooms & shelters)
     if (!tier || 1 < tier) raise_deck(2, deck=0)
-        translate([0, Dlong/2 - Vgame.y/2])
+        translate([-Dshort/2, Dlong/2 - Vgame.y/2])
             deck_box(width=Dshort, color="#c0c080");
     // base cards
     if (!tier || 1 < tier) raise_deck() {
